@@ -556,7 +556,10 @@
         ];
 
         // 教科書レベルの基本ID群
-        const basicIds = ["p1","p21","p41","p61","p76","p91","a1","a21","a36","a46","a56","a71","a81","a91"];
+        const basicIds = [
+            "p1", "p2", "p3", "p8", "p21", "p22", "p23", "p24", "p41", "p42", "p44", "p45", "p61", "p62", "p63", "p76", "p77", "p78", "p91", "p92", 
+            "a1", "a2", "a3", "a4", "a5", "a13", "a21", "a22", "a23", "a24", "a26", "a36", "a39", "a40", "a41", "a46", "a51", "a52", "a56", "a58", "a59", "a68", "a71", "a73", "a75", "a76", "a80", "a81", "a82", "a85", "a86", "a88", "a91", "a92", "a94", "a96", "a98", "a99"
+        ];
 
         function getTraitSig(bio) { return JSON.stringify(Object.keys(bio.traits).sort().reduce((acc, k) => { acc[k] = bio.traits[k]; return acc; }, {})); }
         function shuffle(arr) { let a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
