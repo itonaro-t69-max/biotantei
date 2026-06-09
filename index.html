@@ -46,6 +46,7 @@
         .tree-ul { list-style: none; border-left: 2px solid #cbd5e1; margin-left: 0.5rem; padding-left: 0.5rem; margin-top: 0.5rem; }
         .tree-li { margin-bottom: 0.4rem; position: relative; font-size: 0.85rem; font-weight: bold; color: #334155; }
         .tree-li::before { content: ""; position: absolute; left: -0.5rem; top: 0.5rem; width: 0.5rem; border-top: 2px solid #cbd5e1; }
+        .btn-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
     </style>
 </head>
 <body class="text-slate-800 h-screen overflow-hidden flex flex-col">
@@ -90,8 +91,8 @@
                 </span>
                 <div class="flex items-center gap-1.5">
                     <span id="questionCount" class="text-xs font-bold text-slate-600 mr-1">あと 5 回</span>
-                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300 shadow-sm">🗺️ 検索表</button>
-                    <button onclick="returnToMenu()" class="bg-slate-100 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300 shadow-sm">終了</button>
+                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300 shadow-sm transition-colors">🗺️ 検索表</button>
+                    <button onclick="returnToMenu()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300 shadow-sm transition-colors">終了</button>
                 </div>
             </div>
             <div class="w-full max-w-6xl mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden shadow-inner">
@@ -116,9 +117,9 @@
                         <i class="ph-fill ph-files text-indigo-600"></i> 候補リスト 
                         <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1"></span>
                     </p>
-                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 text-white px-2 py-1 rounded shadow active:scale-95">🔄 リセット</button>
+                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded shadow active:scale-95 transition-colors">🔄 リセット</button>
                 </div>
-                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 gap-1.5 content-start pb-2"></div>
+                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-1.5 content-start pb-2"></div>
             </div>
         </div>
     </div>
@@ -301,8 +302,8 @@
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
         try {
-            if (localStorage.getItem('biodet_v104_animal') === 'true') unlockedStatus.animal = true;
-            if (localStorage.getItem('biodet_v104_mix') === 'true') unlockedStatus.mix = true;
+            if (localStorage.getItem('biodet_v105_animal') === 'true') unlockedStatus.animal = true;
+            if (localStorage.getItem('biodet_v105_mix') === 'true') unlockedStatus.mix = true;
         } catch(e) {}
         
         let pendingMode = "", selectedMode = '', currentDifficulty = 'basic';
@@ -684,7 +685,7 @@
             const val = document.getElementById('password-input').value.trim();
             if (val === PASSWORDS[pendingMode]) {
                 unlockedStatus[pendingMode] = true;
-                try { localStorage.setItem(`biodet_v104_${pendingMode}`, 'true'); } catch(e){}
+                try { localStorage.setItem(`biodet_v105_${pendingMode}`, 'true'); } catch(e){}
                 
                 const btn = document.getElementById(`btn-${pendingMode}`);
                 btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg`;
@@ -715,11 +716,9 @@
             document.getElementById('screen-menu').classList.add('hidden');
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById(id).classList.remove('hidden');
-            if(id === 'screen-game') document.getElementById(id).classList.add('flex');
         }
 
         function returnToMenu() {
-            // ★ゴーストバグの完全防止
             if (timerId) { clearTimeout(timerId); timerId = null; }
             document.getElementById('global-blocker').classList.add('hidden');
             showScreen('screen-menu');
@@ -816,7 +815,6 @@
             qs.forEach(q => {
                 const ans = new Set();
                 sur.forEach(b => ans.add(safeVal(b, q.key)));
-                // ★ 質問回数が0回になったら、押せないボタンは視覚的にも完全にロック（グレーアウト）する
                 const isUseless = ans.size <= 1 || remQ <= 0;
 
                 const btn = document.createElement('button');
@@ -825,7 +823,7 @@
                 
                 btn.innerHTML = `
                     <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 flex-shrink-0">
-                        <i class="ph-bold ${q.icon} text-sm sm:text-base ${isUseless ? 'text-slate-400' : 'text-indigo-700'}"></i>
+                        <i class="ph-bold ${isUseless && remQ <= 0 ? 'ph-lock-key' : q.icon} text-sm sm:text-base ${isUseless ? 'text-slate-400' : 'text-indigo-700'}"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-1 mb-0.5">
@@ -888,7 +886,6 @@
                 d.innerHTML = `<span class="text-[9px] sm:text-[10px] opacity-70 block mb-0.5 font-bold tracking-wide">対象生物X</span><span class="flex items-start gap-1"><i class="ph-bold ${ic} text-base sm:text-lg mt-0.5"></i> <span>${txt}</span></span>`;
             }
             box.appendChild(d);
-            // ★ リッチなスムーズスクロール
             box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
         }
 
@@ -927,7 +924,6 @@
         function updateQC() {
             const countSpan = document.getElementById('questionCount');
             const bar = document.getElementById('progressBar');
-            // ★ マイナス防止
             const safeCount = Math.max(0, remQ);
             
             countSpan.innerText = `あと ${safeCount} 回`;
@@ -985,17 +981,17 @@
             const isSuc = id === targetBio.id;
             document.getElementById('res-icon').innerText = getBioEmoji(targetBio);
             document.getElementById('res-title').innerText = isSuc ? "同定成功！" : "同定ミス...";
-            document.getElementById('res-title').style.color = isSuc ? "var(--primary)" : "var(--danger)";
+            document.getElementById('res-title').className = `text-2xl font-black mb-1 tracking-wider ${isSuc ? "text-indigo-600" : "text-rose-600"}`;
             
             if (isSuc) {
-                document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は「<span style="color:var(--primary); font-size:1.2rem;">${targetBio.name}</span>」でした。`;
+                document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は「<span class="text-indigo-600 text-lg font-black">${targetBio.name}</span>」でした。`;
             } else {
                 const wName = b.name;
-                document.getElementById('res-msg').innerHTML = `「${wName}」ではありません。<br>本当の正体は「<span style="color:var(--danger); font-size:1.2rem;">${targetBio.name}</span>」でした。`;
+                document.getElementById('res-msg').innerHTML = `「${wName}」ではありません。<br>本当の正体は「<span class="text-rose-600 text-lg font-black">${targetBio.name}</span>」でした。`;
             }
             
             document.getElementById('res-exp').innerText = getExplanation(targetBio);
-            document.getElementById('profilingReport').innerText = getReport(isSuc);
+            document.getElementById('res-report').innerText = getReport(isSuc);
             
             openModal('modal-result');
         }
