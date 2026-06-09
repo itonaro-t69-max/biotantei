@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
+        /* iOS Safariのバウンス（ゴムバンド効果）を防止する超重要CSS */
         body { 
             background-color: #f8fafc; 
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
@@ -14,11 +15,11 @@
             font-family: 'Helvetica Neue', Arial, sans-serif; 
             user-select: none; -webkit-user-select: none;
             touch-action: manipulation; 
+            overscroll-behavior-y: none; 
         }
         
         button { touch-action: manipulation; outline: none; }
 
-        /* 候補から外したカードのデザイン */
         .candidate-card.eliminated { 
             opacity: 0.35; 
             transform: scale(0.95); 
@@ -27,13 +28,13 @@
             border-color: #cbd5e1;
         }
         .candidate-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-accuse-disabled { opacity: 0.3; pointer-events: none; }
 
-        /* チャット吹き出し */
         .chat-bubble { position: relative; border-radius: 0.75rem; padding: 0.5rem 0.75rem; margin-bottom: 0.3rem; max-width: 90%; animation: slideIn 0.2s ease-out forwards; font-size: 0.85rem; line-height: 1.3; }
         .chat-q { background-color: #1e293b; color: #f8fafc; border-bottom-right-radius: 0.25rem; margin-left: auto; }
         .chat-a-yes { background-color: #dbeafe; color: #1e3a8a; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #2563eb; }
-        .chat-a-no { background-color: #ffedd5; color: #7c2d12; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 5px solid #ea580c; }
-        .chat-a-invalid { background-color: #f1f5f9; color: #334155; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 5px solid #64748b; }
+        .chat-a-no { background-color: #ffedd5; color: #7c2d12; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #ea580c; }
+        .chat-a-invalid { background-color: #f1f5f9; color: #334155; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #64748b; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .progress-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
@@ -42,7 +43,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* 検索表ツリー */
         .tree-ul { list-style: none; border-left: 2px solid #cbd5e1; margin-left: 0.5rem; padding-left: 0.5rem; margin-top: 0.5rem; }
         .tree-li { margin-bottom: 0.4rem; position: relative; font-size: 0.85rem; font-weight: bold; color: #334155; }
         .tree-li::before { content: ""; position: absolute; left: -0.5rem; top: 0.5rem; width: 0.5rem; border-top: 2px solid #cbd5e1; }
@@ -52,6 +52,7 @@
 
     <div id="global-blocker" class="fixed inset-0 z-[100] hidden"></div>
 
+    <!-- 画面1: メニュー -->
     <div id="screen-menu" class="absolute inset-0 z-40 bg-slate-800 text-white flex flex-col justify-center items-center p-4 sm:p-6 overflow-y-auto">
         <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at center, #ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
         <div class="relative z-10 max-w-lg w-full text-center py-6">
@@ -72,7 +73,63 @@
                     <i class="ph-bold ph-caret-right"></i>
                 </button>
             </div>
-            <button onclick="openModal('modal-tutorial')" class="mt-8 text-sm text-slate-400 underline font-bold">📖 探偵学校（遊び方）</button>
+            <button onclick="openModal('modal-tutorial')" class="mt-8 text-sm text-slate-400 underline font-bold hover:text-white transition-colors">📖 探偵学校（遊び方）</button>
+        </div>
+    </div>
+
+    <!-- 画面2: ゲーム画面 -->
+    <div id="screen-game" class="hidden flex-1 flex-col h-full bg-slate-50 relative">
+        <div class="bg-white shadow-sm z-20 p-2 border-b border-slate-200 flex-none">
+            <div class="flex justify-between items-center mb-1.5 px-1 max-w-6xl mx-auto">
+                <span id="header-mode-text" class="font-black text-indigo-700 text-sm sm:text-base">🕵️‍♂️ バイオ探偵</span>
+                <div class="flex items-center gap-1.5">
+                    <span id="questionCount" class="text-xs font-bold text-slate-600 mr-1">あと 5 回</span>
+                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300">🗺️ 検索表</button>
+                    <button onclick="returnToMenu()" class="bg-slate-100 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300">終了</button>
+                </div>
+            </div>
+            <div class="w-full max-w-6xl mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div id="progressBar" class="bg-indigo-600 h-full progress-bar" style="width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full">
+            <!-- 左カラム -->
+            <div class="w-full h-1/2 md:w-5/12 md:h-full flex flex-col p-1.5 sm:p-3 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
+                <div id="chatHistory" class="flex-none h-1/3 md:h-1/3 bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
+                <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden">
+                    <div id="loadingOverlay" class="absolute inset-0 bg-white/70 z-20 hidden flex justify-center items-center text-2xl">⏳</div>
+                    <p class="text-[10px] text-slate-500 font-black mb-1 flex-none">🔍 特徴を調べる（項目をタップ）</p>
+                    <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col"></div>
+                </div>
+            </div>
+            <!-- 右カラム -->
+            <div class="w-full h-1/2 md:w-7/12 md:h-full flex flex-col p-1.5 sm:p-3 bg-slate-200/50 relative overflow-hidden">
+                <div class="flex-none mb-1 flex justify-between items-center px-1">
+                    <p class="text-xs text-slate-600 font-bold flex items-center gap-1">
+                        <i class="ph-fill ph-files text-indigo-600"></i> 候補リスト 
+                        <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1"></span>
+                    </p>
+                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 text-white px-2 py-1 rounded shadow active:scale-95">🔄 リセット</button>
+                </div>
+                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 gap-1.5 pb-2 content-start"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル群 -->
+    <div id="modal-password" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
+            <button onclick="closeModal('modal-password')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
+            <i class="ph-fill ph-lock-key text-6xl text-slate-400 mb-2"></i>
+            <h2 class="text-2xl font-black mb-2 text-slate-800">極秘ファイルの解放</h2>
+            <p id="password-hint" class="text-sm text-slate-600 mb-6 font-bold"></p>
+            <input type="text" id="password-input" class="w-full border-2 border-slate-300 rounded-xl p-3 text-center text-xl font-bold tracking-widest mb-2 focus:border-indigo-500 focus:outline-none bg-slate-50" placeholder="合言葉を入力">
+            <p id="password-error" class="text-red-500 text-sm font-bold h-5 mb-4 opacity-0 transition-opacity">合言葉が違います！</p>
+            <div class="flex gap-2 mt-2">
+                <button onclick="closeModal('modal-password')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">やめる</button>
+                <button onclick="checkPassword()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">解放する</button>
+            </div>
         </div>
     </div>
 
@@ -93,43 +150,6 @@
         </div>
     </div>
 
-    <div id="screen-game" class="hidden flex-1 flex-col h-full bg-slate-50 relative">
-        <div class="bg-white shadow-sm z-20 p-2 border-b border-slate-200 flex-none">
-            <div class="flex justify-between items-center mb-1.5 px-1 max-w-6xl mx-auto">
-                <span id="header-mode-text" class="font-black text-indigo-700 text-sm sm:text-base">🕵️‍♂️ バイオ探偵</span>
-                <div class="flex items-center gap-1.5">
-                    <span id="questionCount" class="text-xs font-bold text-slate-600 mr-1">あと 5 回</span>
-                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300">🗺️ 検索表</button>
-                    <button onclick="returnToMenu()" class="bg-slate-100 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300">終了</button>
-                </div>
-            </div>
-            <div class="w-full max-w-6xl mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                <div id="progressBar" class="bg-indigo-600 h-full progress-bar" style="width: 100%;"></div>
-            </div>
-        </div>
-
-        <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full">
-            <div class="w-full h-1/2 md:w-5/12 md:h-full flex flex-col p-1.5 sm:p-3 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
-                <div id="chatHistory" class="flex-none h-1/3 md:h-1/3 bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
-                <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden">
-                    <div id="loadingOverlay" class="absolute inset-0 bg-white/70 z-20 hidden flex justify-center items-center text-2xl">⏳</div>
-                    <p class="text-[10px] text-slate-500 font-black mb-1 flex-none">🔍 特徴を調べる（項目をタップ）</p>
-                    <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col"></div>
-                </div>
-            </div>
-            <div class="w-full h-1/2 md:w-7/12 md:h-full flex flex-col p-1.5 sm:p-3 bg-slate-200/50 relative overflow-hidden">
-                <div class="flex-none mb-1 flex justify-between items-center px-1">
-                    <p class="text-xs text-slate-600 font-bold flex items-center gap-1">
-                        <i class="ph-fill ph-files text-indigo-600"></i> 候補リスト 
-                        <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1">16</span>
-                    </p>
-                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 text-white px-2 py-1 rounded shadow active:scale-95">🔄 リセット</button>
-                </div>
-                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 gap-1.5 pb-2 content-start"></div>
-            </div>
-        </div>
-    </div>
-
     <div id="modal-detail" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-3xl border-2 border-slate-300 max-w-sm w-full p-5 shadow-2xl relative flex flex-col">
             <button onclick="closeModal('modal-detail')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -142,7 +162,7 @@
             </div>
             <div class="overflow-y-auto custom-scrollbar max-h-[40vh] pr-1 mb-4">
                 <div class="text-xs font-bold text-indigo-600 mb-2 text-left">📝 観察から得られた事実</div>
-                <div id="detail-content" class="bg-slate-50 border rounded-xl p-3"></div>
+                <div id="detail-content" class="bg-slate-50 border border-slate-200 rounded-xl p-3"></div>
             </div>
             <div id="detail-actions" class="flex flex-col gap-2 pt-2 border-t"></div>
         </div>
@@ -152,7 +172,94 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl relative flex flex-col max-h-[85vh]">
             <button onclick="closeModal('modal-tree')" class="absolute top-3 right-3 text-slate-400"><i class="ph-bold ph-x text-xl"></i></button>
             <h2 class="font-black text-xl mb-3">🗺️ 分類検索表</h2>
-            <div id="tree-content" class="overflow-y-auto custom-scrollbar flex-1 pr-2"></div>
+            <div id="tree-content" class="overflow-y-auto custom-scrollbar flex-1 pr-2">
+                <div class="bg-white border-2 border-slate-200 p-3 rounded-xl text-left mb-3">
+                    <div class="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><i class="ph-fill ph-leaf"></i> 植物の分類</div>
+                    <ul class="tree-ul">
+                        <li class="tree-li">種子をつくらない（胞子）
+                            <ul class="tree-ul">
+                                <li class="tree-li">維管束がある ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">シダ植物</span></li>
+                                <li class="tree-li">維管束がない ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">コケ植物</span></li>
+                            </ul>
+                        </li>
+                        <li class="tree-li">種子をつくる
+                            <ul class="tree-ul">
+                                <li class="tree-li">胚珠がむき出し ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">裸子植物</span></li>
+                                <li class="tree-li">胚珠が子房の中（被子植物）
+                                    <ul class="tree-ul">
+                                        <li class="tree-li">子葉が1枚 ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">単子葉類</span></li>
+                                        <li class="tree-li">子葉が2枚（双子葉類）
+                                            <ul class="tree-ul">
+                                                <li class="tree-li">花びらがくっつく ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">合弁花類</span></li>
+                                                <li class="tree-li">花びらが離れる ➡️ <span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">離弁花類</span></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                <div class="bg-white border-2 border-slate-200 p-3 rounded-xl text-left">
+                    <div class="font-black text-orange-800 text-sm mb-1 flex items-center gap-1"><i class="ph-fill ph-paw-print"></i> 動物の分類</div>
+                    <ul class="tree-ul">
+                        <li class="tree-li">背骨がある（脊椎動物）
+                            <ul class="tree-ul">
+                                <li class="tree-li">恒温動物（体温一定）
+                                    <ul class="tree-ul">
+                                        <li class="tree-li">胎生（子宮で育つ） ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">哺乳類</span></li>
+                                        <li class="tree-li">卵生（卵を産む） ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">鳥類</span></li>
+                                    </ul>
+                                </li>
+                                <li class="tree-li">変温動物（体温変化）
+                                    <ul class="tree-ul">
+                                        <li class="tree-li">殻のある卵を陸上に産む ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">爬虫類</span></li>
+                                        <li class="tree-li">殻のない卵を水中に産む
+                                            <ul class="tree-ul">
+                                                <li class="tree-li">大人は肺と皮膚で呼吸 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">両生類</span></li>
+                                                <li class="tree-li">一生エラ呼吸 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">魚類</span></li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="tree-li">背骨がない（無脊椎動物）
+                            <ul class="tree-ul">
+                                <li class="tree-li">外骨格と足に節がある（節足動物）
+                                    <ul class="tree-ul">
+                                        <li class="tree-li">頭・胸・腹の3つに分かれる ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">昆虫類</span></li>
+                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">甲殻類、クモ類等</span></li>
+                                    </ul>
+                                </li>
+                                <li class="tree-li">外骨格も節もない
+                                    <ul class="tree-ul">
+                                        <li class="tree-li">筋肉の足（軟体）がある ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">軟体動物</span></li>
+                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">棘皮動物等</span></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-tutorial" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
+            <button onclick="closeModal('modal-tutorial')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
+            <div class="text-6xl mb-2">🎓</div>
+            <h2 class="font-black text-2xl mb-4 text-slate-800">探偵学校（遊び方）</h2>
+            <div class="text-left text-sm font-bold leading-relaxed text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p class="mb-2">① リストの中に1種だけいる「生物X」を同定せよ。</p>
+                <p class="mb-2">② <span class="text-indigo-600">「💬特徴を調べる」</span>エリアから質問をして、生物Xの事実を聞き出そう。</p>
+                <p class="mb-2">③ <span class="text-slate-600">「🗂️候補リスト」</span>からカードを開いて観察メモを読み、事実と合わない生物は自分で考えて<span class="text-slate-400">「❌候補から外す」</span>を押して暗転させよう。</p>
+                <p>④ 迷ったら<span class="text-emerald-600">「🗺️検索表」</span>と事実を見比べて推理し、最後に「🎯 同定する」を押せ！</p>
+            </div>
+            <button onclick="closeModal('modal-tutorial')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 mt-4 text-lg">
+                調査を始める
+            </button>
         </div>
     </div>
 
@@ -161,7 +268,7 @@
             <div class="overflow-y-auto custom-scrollbar pr-1">
                 <div id="res-icon" class="text-6xl mb-2 flex justify-center"></div>
                 <h2 id="res-title" class="text-2xl font-black mb-1"></h2>
-                <p id="res-msg" class="mb-4 font-bold text-sm bg-slate-50 p-3 rounded-lg border"></p>
+                <p id="res-msg" class="mb-4 font-bold text-sm bg-slate-50 p-3 rounded-lg border border-slate-200"></p>
                 <div class="mb-4 text-left bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg">
                     <p class="text-[10px] text-indigo-800 font-bold mb-1">💡 なぜこの分類になるの？</p>
                     <p id="res-exp" class="text-xs text-slate-700 font-medium"></p>
@@ -171,7 +278,7 @@
                     <p id="res-report" class="text-xs font-medium"></p>
                 </div>
             </div>
-            <button onclick="startNewRound()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl mt-4">次の調査へ</button>
+            <button onclick="startNewRound()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">次の調査へ</button>
         </div>
     </div>
 
@@ -179,8 +286,8 @@
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
         try {
-            if (localStorage.getItem('biodet_v10_animal') === 'true') unlockedStatus.animal = true;
-            if (localStorage.getItem('biodet_v10_mix') === 'true') unlockedStatus.mix = true;
+            if (localStorage.getItem('biodet_v102_animal') === 'true') unlockedStatus.animal = true;
+            if (localStorage.getItem('biodet_v102_mix') === 'true') unlockedStatus.mix = true;
         } catch(e) {}
         
         let pendingMode = "", selectedMode = '', currentDifficulty = 'basic';
@@ -202,42 +309,388 @@
             { key: "insect", category: "animal", badge: "からだ", bg: "bg-orange-100", col: "text-orange-800", icon: "ph-bug", text: "体は「頭・胸・腹」の3つに分かれますか？", yes: "昆虫類です。", no: "違います。", inv: "節足動物ではないため当てはまりません。" }
         ];
 
-        // 200種の完全データベースは前回と同じ（省略せずに実装）
-        const biologyData = [...Array(100).keys()].map(i => ({ id: `p${i+1}`, mode: "plant", name: `植物${i+1}`, traits: { isPlant: true, seed: i<60, ovary: i<40, cotyledon: i<20, petalJoined: i<10, vessels: i<80 } }));
-        // ※実際には名前をマッピング（サクラ、マツ、ゼニゴケ等）
-        const namesP = ["アサガオ","ツツジ","タンポポ","キク","ヒマワリ","ナス","トマト","ジャガイモ","ピーマン","メロン","カボチャ","キュウリ","サツマイモ","シソ","アジサイ","ホトケノザ","オオバコ","リンドウ","シロツメクサ","クズ","サクラ","アブラナ","エンドウ","ダイズ","リンゴ","ナシ","イチゴ","モモ","ウメ","バラ","ホウセンカ","キャベツ","ダイコン","ブロッコリー","カラスノエンドウ","ナズナ","ソバ","レンゲソウ","フジ","ツバキ","トウモロコシ","イネ","ムギ","ユリ","チューリップ","ネギ","タマネギ","ニラ","ススキ","エノコログサ","ササ","タケ","アヤメ","ヒガンバナ","ラン","スノードロップ","バナナ","パイナップル","ヤシ","スズメノカタビラ","マツ","イチョウ","スギ","ヒノキ","ソテツ","モミ","ツガ","トウヒ","カラマツ","メタセコイア","アスナロ","マオウ","イチイ","カヤ","イヌマキ","イヌワラビ","ゼンマイ","ワラビ","スギナ","ウラジロ","ベニシダ","クサソテツ","シシガシラ","マメヅタ","ノキシノブ","ヘゴ","カニクサ","オシダ","リョウメンシダ","タマシダ","ゼニゴケ","スギゴケ","ジャゴケ","ジンガサゴケ","ギンゴケ","ハイゴケ","ミズゴケ","ホウオウゴケ","タマゴケ","ヒノキゴケ"];
-        namesP.forEach((n,i) => { biologyData[i].name = n; });
-        const animals = [...Array(100).keys()].map(i => ({ id: `a${i+1}`, mode: "animal", name: `動物${i+1}`, traits: { isPlant: false, backbone: i<70, warmBlooded: i<35, viviparous: i<20, shellEgg: i>=35 && i<45, gillsForever: i>=55 && i<70, arthropod: i>=70 && i<90, insect: i>=70 && i<80 } }));
-        const namesA = ["イヌ","ネコ","ヒト","ウサギ","ウシ","ウマ","ブタ","ヒツジ","ライオン","トラ","ゾウ","キリン","クジラ","イルカ","コウモリ","ネズミ","カンガルー","コアラ","ゴリラ","クマ","ハト","ニワトリ","スズメ","ツバメ","カラス","ペンギン","ダチョウ","ワシ","タカ","フクロウ","ツル","ハクチョウ","カモ","インコ","オウム","トカゲ","ヤモリ","カナヘビ","カメ","ヘビ","ワニ","イグアナ","カメレオン","スッポン","ウミガメ","カエル","アマガエル","トノサマガエル","ウシガエル","ヒキガエル","オオサンショウウオ","イモリ","アカハライモリ","サンショウウオ","モリアオガエル","コイ","フナ","メダカ","サケ","マグロ","サンマ","アジ","サバ","イワシ","タイ","ヒラメ","カレイ","サメ","エイ","ウナギ","カブトムシ","クワガタ","モンシロチョウ","アゲハチョウ","トンボ","バッタ","カマキリ","セミ","ハチ","アリ","ザリガニ","カニ","エビ","ヤドカリ","ダンゴムシ","クモ","サソリ","ムカデ","ヤスデ","ダニ","マイマイ","イカ","タコ","アサリ","ホタテガイ","ウニ","ヒトデ","ミミズ","クラゲ","イソギンチャク"];
-        namesA.forEach((n,i) => { animals[i].name = n; });
-        biologyData.push(...animals);
+        // 200種の完全手動データベース
+        const biologyData = [
+            // --- 双子葉類・合弁花類 ---
+            { id: "p1", mode: "plant", name: "アサガオ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p2", mode: "plant", name: "ツツジ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p3", mode: "plant", name: "タンポポ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p4", mode: "plant", name: "キク", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p5", mode: "plant", name: "ヒマワリ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p6", mode: "plant", name: "ナス", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p7", mode: "plant", name: "トマト", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p8", mode: "plant", name: "ジャガイモ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p9", mode: "plant", name: "ピーマン", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p10", mode: "plant", name: "メロン", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p11", mode: "plant", name: "カボチャ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p12", mode: "plant", name: "キュウリ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p13", mode: "plant", name: "サツマイモ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p14", mode: "plant", name: "シソ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p15", mode: "plant", name: "アジサイ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p16", mode: "plant", name: "ホトケノザ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p17", mode: "plant", name: "オオバコ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p18", mode: "plant", name: "リンドウ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p19", mode: "plant", name: "シロツメクサ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            { id: "p20", mode: "plant", name: "クズ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
+            
+            // --- 双子葉類・離弁花類 ---
+            { id: "p21", mode: "plant", name: "サクラ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p22", mode: "plant", name: "アブラナ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p23", mode: "plant", name: "エンドウ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p24", mode: "plant", name: "ダイズ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p25", mode: "plant", name: "リンゴ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p26", mode: "plant", name: "ナシ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p27", mode: "plant", name: "イチゴ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p28", mode: "plant", name: "モモ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p29", mode: "plant", name: "ウメ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p30", mode: "plant", name: "バラ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p31", mode: "plant", name: "ホウセンカ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p32", mode: "plant", name: "キャベツ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p33", mode: "plant", name: "ダイコン", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p34", mode: "plant", name: "ブロッコリー", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p35", mode: "plant", name: "カラスノエンドウ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p36", mode: "plant", name: "ナズナ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p37", mode: "plant", name: "ソバ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p38", mode: "plant", name: "レンゲソウ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p39", mode: "plant", name: "フジ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            { id: "p40", mode: "plant", name: "ツバキ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: false, vessels: true } },
+            
+            // --- 単子葉類 ---
+            { id: "p41", mode: "plant", name: "トウモロコシ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p42", mode: "plant", name: "イネ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p43", mode: "plant", name: "ムギ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p44", mode: "plant", name: "ユリ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p45", mode: "plant", name: "チューリップ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p46", mode: "plant", name: "ネギ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p47", mode: "plant", name: "タマネギ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p48", mode: "plant", name: "ニラ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p49", mode: "plant", name: "ススキ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p50", mode: "plant", name: "エノコログサ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p51", mode: "plant", name: "ササ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p52", mode: "plant", name: "タケ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p53", mode: "plant", name: "アヤメ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p54", mode: "plant", name: "ヒガンバナ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p55", mode: "plant", name: "ラン", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p56", mode: "plant", name: "スノードロップ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p57", mode: "plant", name: "バナナ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p58", mode: "plant", name: "パイナップル", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p59", mode: "plant", name: "ヤシ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            { id: "p60", mode: "plant", name: "スズメノカタビラ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: false, vessels: true } },
+            
+            // --- 裸子植物 ---
+            { id: "p61", mode: "plant", name: "マツ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p62", mode: "plant", name: "イチョウ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p63", mode: "plant", name: "スギ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p64", mode: "plant", name: "ヒノキ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p65", mode: "plant", name: "ソテツ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p66", mode: "plant", name: "モミ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p67", mode: "plant", name: "ツガ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p68", mode: "plant", name: "トウヒ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p69", mode: "plant", name: "カラマツ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p70", mode: "plant", name: "メタセコイア", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p71", mode: "plant", name: "アスナロ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p72", mode: "plant", name: "マオウ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p73", mode: "plant", name: "イチイ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p74", mode: "plant", name: "カヤ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            { id: "p75", mode: "plant", name: "イヌマキ", traits: { isPlant: true, seed: true, ovary: false, vessels: true } },
+            
+            // --- シダ植物 ---
+            { id: "p76", mode: "plant", name: "イヌワラビ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p77", mode: "plant", name: "ゼンマイ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p78", mode: "plant", name: "ワラビ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p79", mode: "plant", name: "スギナ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p80", mode: "plant", name: "ウラジロ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p81", mode: "plant", name: "ベニシダ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p82", mode: "plant", name: "クサソテツ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p83", mode: "plant", name: "シシガシラ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p84", mode: "plant", name: "マメヅタ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p85", mode: "plant", name: "ノキシノブ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p86", mode: "plant", name: "ヘゴ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p87", mode: "plant", name: "カニクサ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p88", mode: "plant", name: "オシダ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p89", mode: "plant", name: "リョウメンシダ", traits: { isPlant: true, seed: false, vessels: true } },
+            { id: "p90", mode: "plant", name: "タマシダ", traits: { isPlant: true, seed: false, vessels: true } },
+            
+            // --- コケ植物 ---
+            { id: "p91", mode: "plant", name: "ゼニゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p92", mode: "plant", name: "スギゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p93", mode: "plant", name: "ジャゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p94", mode: "plant", name: "ジンガサゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p95", mode: "plant", name: "ギンゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p96", mode: "plant", name: "ハイゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p97", mode: "plant", name: "ミズゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p98", mode: "plant", name: "ホウオウゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p99", mode: "plant", name: "タマゴケ", traits: { isPlant: true, seed: false, vessels: false } },
+            { id: "p100", mode: "plant", name: "ヒノキゴケ", traits: { isPlant: true, seed: false, vessels: false } },
 
+            // --- 哺乳類 ---
+            { id: "a1", mode: "animal", name: "イヌ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a2", mode: "animal", name: "ネコ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a3", mode: "animal", name: "ヒト", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a4", mode: "animal", name: "ウサギ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a5", mode: "animal", name: "ウシ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a6", mode: "animal", name: "ウマ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a7", mode: "animal", name: "ブタ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a8", mode: "animal", name: "ヒツジ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a9", mode: "animal", name: "ライオン", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a10", mode: "animal", name: "トラ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a11", mode: "animal", name: "ゾウ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a12", mode: "animal", name: "キリン", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a13", mode: "animal", name: "クジラ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a14", mode: "animal", name: "イルカ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a15", mode: "animal", name: "コウモリ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a16", mode: "animal", name: "ネズミ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a17", mode: "animal", name: "カンガルー", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a18", mode: "animal", name: "コアラ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a19", mode: "animal", name: "ゴリラ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            { id: "a20", mode: "animal", name: "クマ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: true } },
+            
+            // --- 鳥類 ---
+            { id: "a21", mode: "animal", name: "ハト", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a22", mode: "animal", name: "ニワトリ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a23", mode: "animal", name: "スズメ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a24", mode: "animal", name: "ツバメ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a25", mode: "animal", name: "カラス", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a26", mode: "animal", name: "ペンギン", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a27", mode: "animal", name: "ダチョウ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a28", mode: "animal", name: "ワシ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a29", mode: "animal", name: "タカ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a30", mode: "animal", name: "フクロウ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a31", mode: "animal", name: "ツル", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a32", mode: "animal", name: "ハクチョウ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a33", mode: "animal", name: "カモ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a34", mode: "animal", name: "インコ", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            { id: "a35", mode: "animal", name: "オウム", traits: { isPlant: false, backbone: true, warmBlooded: true, viviparous: false } },
+            
+            // --- 爬虫類 ---
+            { id: "a36", mode: "animal", name: "トカゲ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a37", mode: "animal", name: "ヤモリ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a38", mode: "animal", name: "カナヘビ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a39", mode: "animal", name: "カメ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a40", mode: "animal", name: "ヘビ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a41", mode: "animal", name: "ワニ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a42", mode: "animal", name: "イグアナ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a43", mode: "animal", name: "カメレオン", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a44", mode: "animal", name: "スッポン", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            { id: "a45", mode: "animal", name: "ウミガメ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: true } },
+            
+            // --- 両生類 ---
+            { id: "a46", mode: "animal", name: "カエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a47", mode: "animal", name: "アマガエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a48", mode: "animal", name: "トノサマガエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a49", mode: "animal", name: "ウシガエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a50", mode: "animal", name: "ヒキガエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a51", mode: "animal", name: "オオサンショウウオ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a52", mode: "animal", name: "イモリ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a53", mode: "animal", name: "アカハライモリ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a54", mode: "animal", name: "サンショウウオ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            { id: "a55", mode: "animal", name: "モリアオガエル", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: false } },
+            
+            // --- 魚類 ---
+            { id: "a56", mode: "animal", name: "コイ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a57", mode: "animal", name: "フナ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a58", mode: "animal", name: "メダカ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a59", mode: "animal", name: "サケ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a60", mode: "animal", name: "マグロ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a61", mode: "animal", name: "サンマ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a62", mode: "animal", name: "アジ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a63", mode: "animal", name: "サバ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a64", mode: "animal", name: "イワシ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a65", mode: "animal", name: "タイ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a66", mode: "animal", name: "ヒラメ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a67", mode: "animal", name: "カレイ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a68", mode: "animal", name: "サメ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a69", mode: "animal", name: "エイ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            { id: "a70", mode: "animal", name: "ウナギ", traits: { isPlant: false, backbone: true, warmBlooded: false, shellEgg: false, gillsForever: true } },
+            
+            // --- 節足動物（昆虫類） ---
+            { id: "a71", mode: "animal", name: "カブトムシ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a72", mode: "animal", name: "クワガタ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a73", mode: "animal", name: "モンシロチョウ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a74", mode: "animal", name: "アゲハチョウ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a75", mode: "animal", name: "トンボ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a76", mode: "animal", name: "バッタ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a77", mode: "animal", name: "カマキリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a78", mode: "animal", name: "セミ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a79", mode: "animal", name: "ハチ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            { id: "a80", mode: "animal", name: "アリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
+            
+            // --- 節足動物（甲殻類・クモ類・多足類） ---
+            { id: "a81", mode: "animal", name: "ザリガニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a82", mode: "animal", name: "カニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a83", mode: "animal", name: "エビ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a84", mode: "animal", name: "ヤドカリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a85", mode: "animal", name: "ダンゴムシ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a86", mode: "animal", name: "クモ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a87", mode: "animal", name: "サソリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a88", mode: "animal", name: "ムカデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a89", mode: "animal", name: "ヤスデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a90", mode: "animal", name: "ダニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            
+            // --- その他の無脊椎動物（軟体動物など） ---
+            { id: "a91", mode: "animal", name: "マイマイ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a92", mode: "animal", name: "イカ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a93", mode: "animal", name: "タコ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a94", mode: "animal", name: "アサリ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a95", mode: "animal", name: "ホタテガイ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a96", mode: "animal", name: "ウニ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a97", mode: "animal", name: "ヒトデ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a98", mode: "animal", name: "ミミズ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a99", mode: "animal", name: "クラゲ", traits: { isPlant: false, backbone: false, arthropod: false } },
+            { id: "a100", mode: "animal", name: "イソギンチャク", traits: { isPlant: false, backbone: false, arthropod: false } }
+        ];
+
+        // 教科書レベルの基本ID群
         const basicIds = ["p1","p21","p41","p61","p76","p91","a1","a21","a36","a46","a56","a71","a81","a91"];
 
         function getTraitSig(bio) { return JSON.stringify(Object.keys(bio.traits).sort().reduce((acc, k) => { acc[k] = bio.traits[k]; return acc; }, {})); }
         function shuffle(arr) { let a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+        function getBioEmoji(b) {
+            const t = b.traits;
+            if (b.mode === 'plant') {
+                if (t.vessels === false) return '🪨';
+                if (t.seed === false) return '🌿';
+                if (t.ovary === false) return '🌲';
+                if (t.cotyledon === false) return '🌾';
+                return '🌸';
+            } else {
+                if (t.insect) return '🦋';
+                if (t.arthropod) return '🦀';
+                if (t.backbone === false) return '🐌';
+                if (t.gillsForever) return '🐟';
+                if (t.shellEgg === false) return '🐸';
+                if (t.shellEgg === true && t.warmBlooded === false) return '🦎';
+                if (t.warmBlooded && t.viviparous === false) return '🕊️';
+                return '🐶';
+            }
+        }
+
+        function getFactSheetHTML(b) {
+            let html = '<ul class="flex flex-col gap-2 text-left">';
+            const t = b.traits;
+            if (t.isPlant) {
+                html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">☀️</span> <div class="text-xs sm:text-sm font-bold text-slate-700">光合成を行い、自分で養分をつくる。</div></li>';
+                html += t.vessels ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌳</span> <div class="text-xs sm:text-sm font-bold text-slate-700">根・茎・葉の区別（維管束）がある。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">💧</span> <div class="text-xs sm:text-sm font-bold text-slate-700">根・茎・葉の区別（維管束）がない。</div></li>';
+                if (t.seed === false) html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">💨</span> <div class="text-xs sm:text-sm font-bold text-slate-700">種子をつくらず、胞子を飛ばして増える。</div></li>';
+                if (t.seed === true) {
+                    html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌰</span> <div class="text-xs sm:text-sm font-bold text-slate-700">花が咲き、種子をつくって増える。</div></li>';
+                    html += t.ovary ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌸</span> <div class="text-xs sm:text-sm font-bold text-slate-700">胚珠が子房に包まれている。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌲</span> <div class="text-xs sm:text-sm font-bold text-slate-700">胚珠がむき出しになっている（子房がない）。</div></li>';
+                    if (t.ovary) {
+                        html += t.cotyledon ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌱</span> <div class="text-xs sm:text-sm font-bold text-slate-700">芽生えのとき、子葉が2枚出る。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌾</span> <div class="text-xs sm:text-sm font-bold text-slate-700">芽生えのとき、子葉が1枚出る。</div></li>';
+                        if (t.cotyledon) {
+                            html += t.petalJoined ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌷</span> <div class="text-xs sm:text-sm font-bold text-slate-700">花びらが元でくっついている。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌼</span> <div class="text-xs sm:text-sm font-bold text-slate-700">花びらが1枚1枚離れている。</div></li>';
+                        }
+                    }
+                }
+            } else {
+                html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🍖</span> <div class="text-xs sm:text-sm font-bold text-slate-700">他の生物を食べて養分を得る。</div></li>';
+                html += t.backbone ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🦴</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体の中に背骨（脊椎）がある。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐙</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体の中に背骨はない。</div></li>';
+                if (t.backbone) {
+                    if (t.warmBlooded) {
+                        html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌡️</span> <div class="text-xs sm:text-sm font-bold text-slate-700">まわりの温度が変わっても、体温は常に一定である。</div></li>';
+                        html += t.viviparous ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🍼</span> <div class="text-xs sm:text-sm font-bold text-slate-700">母親の子宮の中で育ってから生まれる（胎生）。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🥚</span> <div class="text-xs sm:text-sm font-bold text-slate-700">陸上に、硬い殻のある卵を産む（卵生）。</div></li>';
+                    } else {
+                        html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🌡️</span> <div class="text-xs sm:text-sm font-bold text-slate-700">まわりの温度に合わせて、体温が変わる（変温）。</div></li>';
+                        if (t.shellEgg) {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🥚</span> <div class="text-xs sm:text-sm font-bold text-slate-700">陸上に、殻のある卵を産む。</div></li>';
+                        } else {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">💧</span> <div class="text-xs sm:text-sm font-bold text-slate-700">水中に、殻のない柔らかい卵を産む。</div></li>';
+                            html += t.gillsForever ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐟</span> <div class="text-xs sm:text-sm font-bold text-slate-700">一生エラで呼吸する。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐸</span> <div class="text-xs sm:text-sm font-bold text-slate-700">子どもはエラ呼吸、大人は肺と皮膚で呼吸する。</div></li>';
+                        }
+                    }
+                } else {
+                    if (t.arthropod) {
+                        html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐞</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体や足に節（関節）があり、外骨格で覆われている。</div></li>';
+                        html += t.insect ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐜</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体が「頭・胸・腹」の3つに分かれており、足は6本ある。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🦐</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体は「頭・胸・腹」の3つには分かれていない。</div></li>';
+                    } else {
+                        html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐌</span> <div class="text-xs sm:text-sm font-bold text-slate-700">外骨格はなく、足に節もない。</div></li>';
+                    }
+                }
+            }
+            html += '</ul>';
+            return html;
+        }
+
+        function getExplanation(b) {
+            const t = b.traits;
+            if (t.isPlant) {
+                if (!t.vessels) return "維管束がなく胞子で増えるため「コケ植物」です。";
+                if (!t.seed) return "維管束がありますが、胞子で増えるため「シダ植物」です。";
+                if (!t.ovary) return "胚珠がむき出しのため「裸子植物」です。";
+                if (!t.cotyledon) return "子房があり（被子植物）、子葉が1枚のため「単子葉類」です。";
+                if (t.petalJoined) return "子葉が2枚（双子葉類）で、花びらがくっついているため「合弁花類」です。";
+                return "子葉が2枚（双子葉類）で、花びらが離れているため「離弁花類」です。";
+            } else {
+                if (t.backbone) {
+                    if (t.viviparous) return "背骨があり、体温が一定で胎生のため「哺乳類」です。";
+                    if (t.warmBlooded) return "背骨があり、体温が一定で卵生のため「鳥類」です。";
+                    if (t.shellEgg) return "変温動物で、殻のある卵を陸上に産むため「爬虫類」です。";
+                    if (t.gillsForever) return "一生エラ呼吸をするため「魚類」です。";
+                    return "水中に殻のない卵を産み、大人は肺呼吸になるため「両生類」です。";
+                } else {
+                    if (t.insect) return "外骨格があり、体が頭・胸・腹に分かれているため「昆虫類」です。";
+                    if (t.arthropod) return "外骨格がありますが、昆虫ではないため「甲殻類やクモ類など」の節足動物です。";
+                    return "背骨も外骨格もない無脊椎動物（軟体動物など）です。";
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. 状態・ユーティリティ
+        // ==========================================
+        let poolData = [], currentCandidates = [], targetBio = null;
+        let remQ = 5, askedQ = new Set(), qHistory = [];
+        let isOver = false, isWait = false, timerId = null, currentMobileView = 'chat';
+
+        function openModal(id) { 
+            // ★排他処理：多重表示バグを防止
+            document.querySelectorAll('.fixed.z-50').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden'); 
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // ==========================================
+        // 3. UI・進行制御
+        // ==========================================
         function attemptStartGame(mode) {
-            selectedMode = mode;
-            if (mode === 'plant' || unlockedStatus[mode]) openModal('modal-difficulty');
-            else {
+            if (mode === 'plant' || unlockedStatus[mode]) {
+                selectedMode = mode;
+                openModal('modal-difficulty');
+            } else {
                 pendingMode = mode;
-                document.getElementById('password-hint').innerText = mode === 'animal' ? "動物の同定の合言葉は？" : "総復習の合言葉は？";
+                document.getElementById('password-hint').innerText = mode === 'animal' ? "動物の分類の合言葉は？" : "総復習の合言葉は？";
                 document.getElementById('password-input').value = "";
+                document.getElementById('password-error').classList.replace('opacity-100', 'opacity-0');
                 openModal('modal-password');
+                setTimeout(() => document.getElementById('password-input').focus(), 100);
             }
         }
 
         function checkPassword() {
-            if (document.getElementById('password-input').value === PASSWORDS[pendingMode]) {
+            const val = document.getElementById('password-input').value.trim();
+            if (val === PASSWORDS[pendingMode]) {
                 unlockedStatus[pendingMode] = true;
-                try { localStorage.setItem(`biodet_v10_${pendingMode}`, 'true'); } catch(e){}
+                try { localStorage.setItem(`biodet_v102_${pendingMode}`, 'true'); } catch(e){}
+                
+                const btn = document.getElementById(`btn-${pendingMode}`);
+                btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg`;
+                let icon = pendingMode === 'animal' ? 'ph-paw-print' : 'ph-infinity';
+                let txt = pendingMode === 'animal' ? '動物の分類' : 'ごちゃまぜ';
+                btn.innerHTML = `<span class="flex items-center gap-3"><i class="ph-fill ${icon} text-2xl"></i> ${txt}</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>`;
+                
                 closeModal('modal-password');
+                selectedMode = pendingMode;
                 openModal('modal-difficulty');
             } else {
-                document.getElementById('password-error').classList.replace('opacity-0', 'opacity-100');
+                const err = document.getElementById('password-error');
+                const inp = document.getElementById('password-input');
+                err.classList.replace('opacity-0', 'opacity-100');
+                inp.classList.add('translate-x-1', 'border-red-500');
+                setTimeout(() => inp.classList.remove('translate-x-1', 'border-red-500'), 200);
             }
         }
+        document.getElementById('password-input').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
 
         function selectDifficulty(diff) {
             currentDifficulty = diff;
@@ -245,156 +698,361 @@
             startGame(selectedMode);
         }
 
+        function setMobileView(view) {
+            currentMobileView = view;
+            if (window.innerWidth >= 1024) return;
+            const chat = document.getElementById('panel-left'), cards = document.getElementById('panel-right');
+            const btnChat = document.getElementById('nav-btn-chat'), btnCards = document.getElementById('nav-btn-cards');
+            if (view === 'chat') {
+                chat.classList.remove('hidden'); chat.classList.add('flex');
+                cards.classList.add('hidden'); cards.classList.remove('flex');
+                btnChat.classList.add('text-blue-400', 'bg-slate-800'); btnChat.classList.remove('text-slate-400');
+                btnCards.classList.remove('text-blue-400', 'bg-slate-800'); btnCards.classList.add('text-slate-400');
+            } else {
+                chat.classList.add('hidden'); chat.classList.remove('flex');
+                cards.classList.remove('hidden'); cards.classList.add('flex');
+                btnChat.classList.remove('text-blue-400', 'bg-slate-800'); btnChat.classList.add('text-slate-400');
+                btnCards.classList.add('text-blue-400', 'bg-slate-800'); btnCards.classList.remove('text-slate-400');
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) {
+                document.getElementById('panel-left').classList.remove('hidden'); document.getElementById('panel-left').classList.add('flex');
+                document.getElementById('panel-right').classList.remove('hidden'); document.getElementById('panel-right').classList.add('flex');
+            } else setMobileView(currentMobileView);
+        });
+
+        function showScreen(id) {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'screen-game') document.getElementById(id).classList.add('flex');
+        }
+
+        function returnToMenu() {
+            // ★ゴーストバグの完全防止
+            if (timerId) { clearTimeout(timerId); timerId = null; }
+            document.getElementById('global-blocker').classList.add('hidden');
+            showScreen('screen-menu');
+        }
+
+        function openTutorial() { openModal('modal-tutorial'); }
+        function openTreeModal() { openModal('modal-tree'); }
+
         function startGame(mode) {
-            let base = biologyData.filter(b => mode === 'mix' ? true : b.mode === mode);
-            if (currentDifficulty === 'basic') base = base.filter(b => basicIds.includes(b.id));
+            const hm = document.getElementById('header-mode-text');
             
-            // 厳密な枚数ルール
-            let count = mode === 'plant' ? 6 : mode === 'animal' ? 8 : 14;
-            const groups = {};
-            base.forEach(b => { const s = getTraitSig(b); if(!groups[s]) groups[s] = []; groups[s].push(b); });
-            let u = [];
-            for (let k in groups) u.push(groups[k][Math.floor(Math.random() * groups[k].length)]);
-            u = shuffle(u);
-            targetBio = u[Math.floor(Math.random() * u.length)];
-            currentCandidates = shuffle([targetBio, ...u.filter(b => b.id !== targetBio.id).slice(0, count-1)]).map(b => ({ ...b, isElim: false }));
+            let basePool = [];
+            if (mode === 'plant') { hm.innerHTML = '<i class="ph-fill ph-leaf text-emerald-600 text-lg"></i> 植物編'; basePool = biologyData.filter(b => b.mode === 'plant'); }
+            else if (mode === 'animal') { hm.innerHTML = '<i class="ph-fill ph-paw-print text-orange-600 text-lg"></i> 動物編'; basePool = biologyData.filter(b => b.mode === 'animal'); }
+            else { hm.innerHTML = '<i class="ph-fill ph-infinity text-indigo-600 text-lg"></i> ごちゃまぜ'; basePool = [...biologyData]; }
             
-            remQ = 5; isOver = false; askedQ.clear(); qHistory = [];
+            if (currentDifficulty === 'basic') poolData = basePool.filter(b => basicIds.includes(b.id));
+            else poolData = basePool;
+            
             showScreen('screen-game');
             startNewRound();
         }
 
+        // ==========================================
+        // 4. ゲームロジック
+        // ==========================================
         function startNewRound() {
-            remQ = 5; isOver = false; askedQ.clear(); qHistory = [];
-            currentCandidates.forEach(c => c.isElim = false);
-            updateQC();
-            document.getElementById('chatHistory').innerHTML = '<div class="chat-bubble bg-indigo-50 text-indigo-900 border-l-4 border-indigo-600 font-bold">生物Xを採取した。特徴を調べ、生物を同定せよ。</div>';
-            renderCards(); renderQ();
+            // ★ゴーストバグの完全防止
+            if (timerId) { clearTimeout(timerId); timerId = null; }
+            document.getElementById('global-blocker').classList.add('hidden');
             closeModal('modal-result');
+            remQ = 5; isOver = false; isWait = false;
+            askedQ.clear(); qHistory = [];
+            updateQC();
+
+            accordionState = { basic: true, plant: false, animal: false };
+            if(selectedMode === 'plant') accordionState.plant = true;
+            if(selectedMode === 'animal') accordionState.animal = true;
+
+            let maxCards = 14;
+            if (selectedMode === 'plant') maxCards = 6;
+            if (selectedMode === 'animal') maxCards = 8;
+            if (selectedMode === 'mix') maxCards = 14;
+
+            const tGroups = {};
+            poolData.forEach(b => {
+                const sStr = getTraitSig(b);
+                if(!tGroups[sStr]) tGroups[sStr] = [];
+                tGroups[sStr].push(b);
+            });
+
+            let uCands = [];
+            for (let k in tGroups) { uCands.push(tGroups[k][Math.floor(Math.random() * tGroups[k].length)]); }
+            uCands = shuffle(uCands);
+
+            targetBio = uCands[Math.floor(Math.random() * uCands.length)];
+            const safeDummies = uCands.filter(b => b.id !== targetBio.id);
+            const selectedDummies = safeDummies.slice(0, maxCards - 1);
+
+            currentCandidates = shuffle([targetBio, ...selectedDummies]).map(b => ({ ...b, isElim: false }));
+
+            // ★ バッジリセット時の色バグ修正
+            const badge = document.getElementById('nav-survivor-badge');
+            badge.innerText = currentCandidates.length;
+            badge.className = "bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1";
+
+            document.getElementById('chatHistory').innerHTML = `
+                <div class="chat-bubble bg-indigo-50 text-indigo-900 border-l-4 border-indigo-600 self-start shadow-sm font-bold">
+                    未確認の生物Xを確保した。特徴を調べ、生物Xを同定（特定）してくれ。<br>
+                    <span class="text-[10px] sm:text-xs text-slate-500">※違う生物は自分で考えてカードから「❌外す」を押して減らそう。</span>
+                </div>
+            `;
+            
+            renderCards();
+            renderQ();
+        }
+
+        function toggleAccordion(id) {
+            accordionState[id] = !accordionState[id];
+            renderQ();
+        }
+
+        function safeVal(bio, key) {
+            let v = bio.traits.hasOwnProperty(key) ? bio.traits[key] : undefined;
+            if (key === "gillsForever" && v === undefined && bio.traits.backbone) v = false;
+            return v;
         }
 
         function renderQ() {
             const container = document.getElementById('questionButtonsContainer');
             container.innerHTML = '';
-            const sections = [
-                { id: "basic", label: "共通・基本", icon: "ph-sun", bg: "bg-amber-50", show: true },
-                { id: "plant", label: "植物のつくり", icon: "ph-leaf", bg: "bg-emerald-50", show: selectedMode !== 'animal' },
-                { id: "animal", label: "動物のつくり", icon: "ph-paw-print", bg: "bg-indigo-50", show: selectedMode !== 'plant' }
-            ];
-            sections.forEach(s => {
-                if(!s.show) return;
-                const qs = qList.filter(q => q.category === s.id && !askedQ.has(q.key));
-                if(qs.length === 0) return;
-                
-                const h = document.createElement('button');
-                h.className = `w-full text-left font-black border p-2 rounded-lg flex items-center justify-between mb-1 ${s.bg}`;
-                h.onclick = () => { accordionState[s.id] = !accordionState[s.id]; renderQ(); };
-                h.innerHTML = `<span><i class="ph-bold ${s.icon}"></i> ${s.label} (${qs.length})</span><i class="ph-bold ph-caret-${accordionState[s.id]?'up':'down'}"></i>`;
-                container.appendChild(h);
+            if (isOver) return;
 
-                if(accordionState[s.id]) {
-                    const box = document.createElement('div');
-                    qs.forEach(q => {
-                        const b = document.createElement('button');
-                        b.className = "w-full bg-white border p-2 rounded-lg text-left text-[11px] font-bold mb-1 shadow-sm";
-                        b.onclick = () => askQ(q);
-                        b.innerText = q.text;
-                        box.appendChild(b);
-                    });
-                    container.appendChild(box);
-                }
+            const secs = [
+                { id: "basic", label: "共通・基本の調査", show: ["plant", "mix", "animal"], bg: "bg-amber-50 hover:bg-amber-100", border: "border-amber-300", text: "text-amber-900", icon: "ph-sun" },
+                { id: "plant", label: "植物のつくり調査", show: ["plant", "mix"], bg: "bg-emerald-50 hover:bg-emerald-100", border: "border-emerald-300", text: "text-emerald-900", icon: "ph-leaf" },
+                { id: "animal", label: "動物のつくり調査", show: ["animal", "mix"], bg: "bg-indigo-50 hover:bg-indigo-100", border: "border-indigo-300", text: "text-indigo-900", icon: "ph-paw-print" }
+            ];
+
+            const sur = currentCandidates.filter(b => !b.isElim);
+
+            secs.forEach(s => {
+                if (!s.show.includes(selectedMode)) return;
+                const qs = qList.filter(q => q.category === s.id && !askedQ.has(q.key));
+                if (qs.length === 0) return;
+
+                const headerBtn = document.createElement('button');
+                headerBtn.className = `w-full text-left font-black border-2 px-3 py-2 sm:py-2.5 rounded-xl flex items-center justify-between mb-1.5 transition-colors ${s.bg} ${s.border} ${s.text} shadow-sm`;
+                headerBtn.onclick = () => toggleAccordion(s.id);
+                headerBtn.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="ph-bold ${s.icon} text-base sm:text-lg"></i>
+                        <span class="text-xs sm:text-sm tracking-wide">${s.label} <span class="opacity-60 font-bold ml-1">(${qs.length}問)</span></span>
+                    </div>
+                    <i class="ph-bold ${accordionState[s.id] ? 'ph-caret-up' : 'ph-caret-down'} text-lg opacity-70"></i>
+                `;
+                container.appendChild(headerBtn);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${accordionState[s.id] ? 'max-h-[1000px] opacity-100 mb-2' : 'max-h-0 opacity-0 mb-0'}`;
+
+                qs.forEach(q => {
+                    const ans = new Set();
+                    sur.forEach(b => ans.add(safeVal(b, q.key)));
+                    const isUseless = ans.size <= 1;
+
+                    const btn = document.createElement('button');
+                    // ★ UIバグ修正：無効化された質問は完全グレーアウト
+                    btn.className = `w-full bg-white border-2 rounded-xl p-2 text-left flex items-center gap-2 transition-all mb-1.5 ${isUseless ? 'border-slate-200 btn-disabled' : 'border-slate-300 hover:border-indigo-500 hover:bg-slate-50 active:translate-y-0.5 active:border-b-2'}`;
+                    if (!isUseless) btn.onclick = () => askQ(q);
+                    
+                    btn.innerHTML = `
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 flex-shrink-0">
+                            <i class="ph-bold ${q.icon} text-sm sm:text-base ${isUseless ? 'text-slate-400' : 'text-indigo-700'}"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] sm:text-[12px] font-bold tracking-tight leading-snug whitespace-normal ${isUseless ? 'text-slate-400' : 'text-slate-800'}">${q.text}</p>
+                        </div>
+                        <i class="ph-bold ${isUseless ? 'ph-lock-key text-slate-300' : 'ph-caret-right text-slate-300'} text-xs flex-shrink-0"></i>
+                    `;
+                    contentDiv.appendChild(btn);
+                });
+                container.appendChild(contentDiv);
             });
         }
 
         function askQ(q) {
             if (remQ <= 0 || isOver || isWait) return;
-            isWait = true; document.getElementById('loadingOverlay').classList.remove('hidden');
+            isWait = true;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('global-blocker').classList.remove('hidden');
+            
             chat(q.text, "user");
-            askedQ.add(q.key); remQ--; updateQC(); renderQ();
+            askedQ.add(q.key);
+            remQ--;
+            updateQC();
+            renderQ();
 
-            setTimeout(() => {
-                isWait = false; document.getElementById('loadingOverlay').classList.add('hidden');
-                let v = targetBio.traits[q.key];
-                if(q.key === "gillsForever" && v === undefined && targetBio.traits.backbone) v = false;
-                if(v === true) chat(q.yes, "yes"); else if(v === false) chat(q.no, "no"); else chat(q.inv || "対象外です", "inv");
-                qHistory.push({ key: q.key, ok: v !== undefined });
+            timerId = setTimeout(() => {
+                isWait = false;
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('global-blocker').classList.add('hidden');
+                if(isOver) return;
+
+                const tVal = safeVal(targetBio, q.key);
+                let rType = "valid";
+                if (tVal === true) chat(q.yes, "yes");
+                else if (tVal === false) chat(q.no, "no");
+                else { chat(q.inv || "当てはまりません。", "inv"); rType = "invalid"; }
+                
+                qHistory.push({ key: q.key, res: rType });
                 renderQ();
+
+                if (remQ === 0) {
+                    timerId = setTimeout(() => {
+                        if(!isOver) {
+                            chat("調べる回数が尽きた！観察メモと検索表をもとに、生物Xを同定せよ。", "sys");
+                            if (window.innerWidth < 1024) setTimeout(() => setMobileView('cards'), 1000);
+                        }
+                    }, 800);
+                }
             }, 600);
         }
 
-        function chat(t, type) {
-            const b = document.createElement('div');
-            b.className = `chat-bubble chat-${type}`;
-            b.innerText = t;
-            const h = document.getElementById('chatHistory');
-            h.appendChild(b); h.scrollTop = h.scrollHeight;
+        function chat(txt, type) {
+            const box = document.getElementById('chatHistory');
+            const d = document.createElement('div');
+            if (type === "user") { d.className = "chat-bubble chat-q shadow-md self-end"; d.innerHTML = `<span class="text-[9px] sm:text-[10px] text-slate-400 block mb-0.5 font-bold"><i class="ph-bold ph-user"></i> あなた</span>${txt}`; }
+            else if (type === "sys") { d.className = "chat-bubble bg-slate-200 text-slate-700 border-l-4 border-slate-500 self-center text-xs sm:text-sm font-bold mt-1 text-center w-full"; d.innerText = txt; }
+            else {
+                const c = type==="yes" ? "chat-a-yes" : type==="no" ? "chat-a-no" : "chat-a-invalid";
+                const ic = type==="yes" ? "ph-check-circle text-blue-600" : type==="no" ? "ph-x-circle text-orange-600" : "ph-question text-slate-500";
+                d.className = `chat-bubble ${c} shadow-md font-bold`;
+                d.innerHTML = `<span class="text-[9px] sm:text-[10px] opacity-70 block mb-0.5 font-bold tracking-wide">対象生物X</span><span class="flex items-start gap-1"><i class="ph-bold ${ic} text-base sm:text-lg mt-0.5"></i> <span>${txt}</span></span>`;
+            }
+            box.appendChild(d);
+            box.scrollTop = box.scrollHeight;
         }
 
         function renderCards() {
             const c = document.getElementById('cardsArea');
             c.innerHTML = '';
             currentCandidates.forEach(b => {
-                const d = document.createElement('div');
-                d.className = `candidate-card bg-white border-2 rounded-xl p-1 text-center cursor-pointer shadow-sm flex flex-col items-center justify-center min-h-[70px] ${b.isElim ? 'eliminated' : ''}`;
-                d.onclick = () => showDetail(b);
-                d.innerHTML = `<div class="text-2xl">${getBioEmoji(b)}</div><div class="text-[9px] font-black truncate w-full px-0.5">${b.name}</div>`;
-                c.appendChild(d);
+                const div = document.createElement('div');
+                div.id = `card-${b.id}`;
+                div.className = `candidate-card bg-white border-2 border-slate-200 rounded-xl p-1.5 sm:p-2.5 text-center cursor-pointer shadow-sm transition-all flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px] ${b.isElim ? 'eliminated' : 'hover:border-indigo-500 hover:shadow-md hover:-translate-y-1'}`;
+                div.onclick = () => showDetailModal(b.id);
+                
+                div.innerHTML = `
+                    <div class="text-3xl sm:text-4xl mb-0.5">${getBioEmoji(b)}</div>
+                    <div class="text-[10px] sm:text-xs font-black text-slate-800 tracking-tight leading-tight w-full truncate">${b.name}</div>
+                `;
+                c.appendChild(div);
             });
-            const survivors = currentCandidates.filter(c => !c.isElim).length;
-            document.getElementById('nav-survivor-badge').innerText = survivors;
         }
 
-        function showDetail(b) {
-            if (isOver) return;
+        function toggleElim(id) {
+            if(isOver || isWait) return;
+            const b = currentCandidates.find(x => x.id === id);
+            b.isElim = !b.isElim;
+            renderCards(); 
+            
+            let surCount = currentCandidates.filter(c => !c.isElim).length;
+            const badge = document.getElementById('nav-survivor-badge');
+            badge.innerText = surCount;
+            if(surCount <= 3) badge.className = "bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1 animate-pulse";
+            else badge.className = "bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1";
+            
+            // ★ バグ修正：手動で除外したら、残りの生物に応じて質問の有効・無効を再計算する
+            renderQ();
+        }
+
+        function updateQC() {
+            const countSpan = document.getElementById('questionCount');
+            const bar = document.getElementById('progressBar');
+            // ★ マイナス防止
+            const safeCount = Math.max(0, remQ);
+            
+            countSpan.innerText = `あと ${safeCount} 回`;
+            bar.style.width = `${(safeCount / 5) * 100}%`;
+            
+            if(safeCount <= 1) {
+                countSpan.classList.add('text-red-600');
+                bar.classList.replace('bg-indigo-600', 'bg-red-500');
+            } else {
+                countSpan.classList.remove('text-red-600');
+                bar.classList.replace('bg-red-500', 'bg-indigo-600');
+            }
+        }
+
+        function showDetailModal(id) {
+            if (isOver || isWait) return;
+            const b = currentCandidates.find(x => x.id === id);
             document.getElementById('detail-emoji').innerText = getBioEmoji(b);
             document.getElementById('detail-name').innerText = b.name;
             document.getElementById('detail-content').innerHTML = getFactSheetHTML(b);
+            
             document.getElementById('detail-actions').innerHTML = `
-                <div class="flex gap-2">
-                    <button onclick="bElim('${b.id}')" class="flex-1 bg-slate-100 py-3 rounded-xl font-bold border border-slate-300 text-xs">${b.isElim?'候補に戻す':'❌ 候補から外す'}</button>
-                    <button onclick="bIdentify('${b.id}')" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-md text-xs ${b.isElim?'btn-accuse-disabled':''}">🎯 同定する</button>
+                <div class="flex gap-2 w-full mb-2">
+                    <button onclick="toggleElim('${b.id}'); closeModal('modal-detail');" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-md border-b-4 border-slate-300 active:border-b-0 active:translate-y-1 text-xs sm:text-sm">
+                        ${b.isElim ? '↺ 候補に戻す' : '❌ 候補から外す'}
+                    </button>
+                    <button onclick="closeModal('modal-detail'); finishGame('${b.id}');" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 ${b.isElim ? 'btn-accuse-disabled' : ''} text-xs sm:text-sm">
+                        🎯 同定する
+                    </button>
                 </div>
+                <button onclick="closeModal('modal-detail')" class="w-full text-slate-400 hover:text-slate-600 text-xs sm:text-sm font-bold py-2">閉じる</button>
             `;
             openModal('modal-detail');
         }
 
-        function bElim(id) { 
-            const b = currentCandidates.find(c => c.id === id); 
-            b.isElim = !b.isElim; 
-            renderCards(); closeModal('modal-detail'); 
+        function getReport(isSuc) {
+            if (!isSuc) return "【同定ミス】証拠が不十分なまま特定してしまったね。「🔍観察メモ」と「🗺️分類検索表」を見比べて、確実に違う生物を「候補から外す」作業を徹底しよう！";
+            if (qHistory.length === 0) return "ノーヒントでの同定だね！次は特徴を調べて確実な証拠を集める練習をしよう。";
+            const f = qHistory[0];
+            if (selectedMode === 'mix' && f.key === 'isPlant') return "【素晴らしい！】最初に「植物か動物か（光合成）」を見極めたのは大正解！完璧な思考プロセスだ！";
+            if (["seed", "vessels", "backbone", "isPlant"].includes(f.key)) return "【素晴らしい！】最初の調査で大きな分類基準（共通・基本）に目をつけたのは良いアプローチだ。効率よく候補を絞り込めたね！";
+            return "【惜しい！】いきなり細かい特徴を調べてしまったね。まずはリストの上のほうにある「基本」の調査から始めると、一気に候補を絞り込めるよ！";
         }
 
-        function bIdentify(id) {
-            if(isOver) return; isOver = true;
-            closeModal('modal-detail');
-            const win = id === targetBio.id;
+        function finishGame(id) {
+            if (isOver || isWait) return;
+            const b = currentCandidates.find(x => x.id === id);
+            if (b.isElim) return; 
+
+            isOver = true;
+            renderQ();
+            if (timerId) { clearTimeout(timerId); timerId = null; }
+            document.getElementById('global-blocker').classList.add('hidden');
+            
+            const isSuc = id === targetBio.id;
             document.getElementById('res-icon').innerText = getBioEmoji(targetBio);
-            document.getElementById('res-title').innerText = win ? "同定成功！" : "同定ミス...";
-            document.getElementById('res-title').className = `text-2xl font-black ${win?'text-indigo-600':'text-rose-600'}`;
-            document.getElementById('res-msg').innerText = win ? `正体は ${targetBio.name} でした！` : `残念、正体は ${targetBio.name} でした。`;
+            document.getElementById('res-title').innerText = isSuc ? "同定成功！" : "同定ミス...";
+            document.getElementById('res-title').style.color = isSuc ? "var(--primary)" : "var(--danger)";
+            
+            if (isSuc) {
+                document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は「<span style="color:var(--primary); font-size:1.2rem;">${targetBio.name}</span>」でした。`;
+            } else {
+                const wName = b.name;
+                document.getElementById('res-msg').innerHTML = `「${wName}」ではありません。<br>本当の正体は「<span style="color:var(--danger); font-size:1.2rem;">${targetBio.name}</span>」でした。`;
+            }
+            
             document.getElementById('res-exp').innerText = getExplanation(targetBio);
-            document.getElementById('res-report').innerText = win ? "素晴らしい調査でした。大きな分類から順に調べることで効率的に同定できましたね！" : "観察メモと検索表をじっくり見比べることが大切です。もう一度挑戦しましょう！";
+            document.getElementById('profilingReport').innerText = getReport(isSuc);
+            
             openModal('modal-result');
         }
 
-        function updateQC() {
-            document.getElementById('questionCount').innerText = `あと ${remQ} 回`;
-            document.getElementById('progressBar').style.width = (remQ * 20) + "%";
-        }
-
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-        function showScreen(id) { 
-            document.getElementById('screen-menu').classList.add('hidden'); 
-            document.getElementById('screen-game').classList.add('hidden');
-            document.getElementById(id).classList.remove('hidden');
-        }
-        function returnToMenu() { showScreen('screen-menu'); }
-
-        window.onload = () => {
-            if(unlockedStatus.animal) document.getElementById('btn-animal').className = "w-full bg-orange-600 text-white font-bold py-3 px-5 rounded-xl flex justify-between items-center";
-            if(unlockedStatus.mix) document.getElementById('btn-mix').className = "w-full bg-indigo-600 text-white font-bold py-3 px-5 rounded-xl flex justify-between items-center";
+        window.onload = function() {
+            if (unlockedStatus.animal) {
+                const btn = document.getElementById('btn-animal');
+                btn.className = "w-full bg-orange-600 hover:bg-orange-500 border-b-4 border-orange-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg";
+                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-paw-print text-2xl"></i> 動物の分類</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>';
+            }
+            if (unlockedStatus.mix) {
+                const btn = document.getElementById('btn-mix');
+                btn.className = "w-full bg-indigo-600 hover:bg-indigo-500 border-b-4 border-indigo-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 relative overflow-hidden text-base sm:text-lg";
+                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-infinity text-2xl"></i> ごちゃまぜ</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>';
+            }
         };
+
     </script>
 </body>
 </html>
