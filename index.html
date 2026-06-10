@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 〜未確認生物を同定せよ〜</title>
+    <title>バイオ探偵 v10.8.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
@@ -46,19 +46,24 @@
         .tree-ul { list-style: none; border-left: 2px solid #cbd5e1; margin-left: 0.5rem; padding-left: 0.5rem; margin-top: 0.5rem; }
         .tree-li { margin-bottom: 0.4rem; position: relative; font-size: 0.85rem; font-weight: bold; color: #334155; }
         .tree-li::before { content: ""; position: absolute; left: -0.5rem; top: 0.5rem; width: 0.5rem; border-top: 2px solid #cbd5e1; }
+        .btn-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
     </style>
 </head>
 <body class="text-slate-800 h-screen overflow-hidden flex flex-col">
 
     <div id="global-blocker" class="fixed inset-0 z-[100] hidden"></div>
 
+    <!-- ========================================== -->
     <!-- 画面1: メニュー -->
+    <!-- ========================================== -->
     <div id="screen-menu" class="absolute inset-0 z-40 bg-slate-800 text-white flex flex-col justify-center items-center p-4 sm:p-6 overflow-y-auto">
         <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at center, #ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
         <div class="relative z-10 max-w-lg w-full text-center py-6">
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v10.8.0 (クリーンアップ完了版)</span>
+
             <div class="space-y-4 max-w-sm mx-auto">
                 <button onclick="attemptStartGame('plant')" class="w-full bg-emerald-600 hover:bg-emerald-500 border-b-4 border-emerald-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base">
                     <span class="flex items-center gap-3"><i class="ph-fill ph-leaf text-2xl"></i> 植物の同定 <span class="text-[10px] bg-white text-emerald-800 px-2 py-0.5 rounded-full font-bold">6種</span></span>
@@ -77,24 +82,28 @@
         </div>
     </div>
 
-    <!-- 画面2: ゲーム画面 -->
+    <!-- ========================================== -->
+    <!-- 画面2: ゲーム画面 (上下/左右分割レイアウト) -->
+    <!-- ========================================== -->
     <div id="screen-game" class="hidden flex-1 flex-col h-full bg-slate-50 relative">
         <div class="bg-white shadow-sm z-20 p-2 border-b border-slate-200 flex-none">
             <div class="flex justify-between items-center mb-1.5 px-1 max-w-6xl mx-auto">
-                <span id="header-mode-text" class="font-black text-indigo-700 text-sm sm:text-base">🕵️‍♂️ バイオ探偵</span>
+                <span id="header-mode-text" class="font-black text-indigo-700 text-sm sm:text-base flex items-center gap-1">
+                    <i class="ph-fill ph-detective text-lg"></i> バイオ探偵
+                </span>
                 <div class="flex items-center gap-1.5">
                     <span id="questionCount" class="text-xs font-bold text-slate-600 mr-1">あと 5 回</span>
-                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300">🗺️ 検索表</button>
-                    <button onclick="returnToMenu()" class="bg-slate-100 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300">終了</button>
+                    <button onclick="openModal('modal-tree')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-1 px-2.5 rounded-lg text-xs border border-emerald-300 shadow-sm transition-colors">🗺️ 検索表</button>
+                    <button onclick="returnToMenu()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1 px-2.5 rounded-lg text-xs border border-slate-300 shadow-sm transition-colors">終了</button>
                 </div>
             </div>
-            <div class="w-full max-w-6xl mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden">
+            <div class="w-full max-w-6xl mx-auto bg-slate-200 h-1.5 rounded-full overflow-hidden shadow-inner">
                 <div id="progressBar" class="bg-indigo-600 h-full progress-bar" style="width: 100%;"></div>
             </div>
         </div>
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full">
-            <!-- 左カラム：チャットとテキストリスト形式の質問 -->
+            <!-- 左/上カラム：チャットと質問 -->
             <div class="w-full h-1/2 md:w-5/12 md:h-full flex flex-col p-1.5 sm:p-3 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
                 <div id="chatHistory" class="flex-none h-[40%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
                 <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden">
@@ -103,21 +112,25 @@
                     <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col pb-2"></div>
                 </div>
             </div>
-            <!-- 右カラム -->
+            <!-- 右/下カラム：候補リスト -->
             <div class="w-full h-1/2 md:w-7/12 md:h-full flex flex-col p-1.5 sm:p-3 bg-slate-200/50 relative overflow-hidden">
                 <div class="flex-none mb-1 flex justify-between items-center px-1">
                     <p class="text-xs text-slate-600 font-bold flex items-center gap-1">
                         <i class="ph-fill ph-files text-indigo-600"></i> 候補リスト 
                         <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1">16</span>
                     </p>
-                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 text-white px-2 py-1 rounded shadow active:scale-95">🔄 リセット</button>
+                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded shadow active:scale-95 transition-colors">🔄 リセット</button>
                 </div>
-                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 gap-1.5 pb-2 content-start"></div>
+                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-1.5 content-start pb-2"></div>
             </div>
         </div>
     </div>
 
+    <!-- ========================================== -->
     <!-- モーダル群 -->
+    <!-- ========================================== -->
+
+    <!-- 合言葉モーダル -->
     <div id="modal-password" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-password')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -133,16 +146,17 @@
         </div>
     </div>
 
+    <!-- 難易度モーダル -->
     <div id="modal-difficulty" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-difficulty')" class="absolute top-3 right-3 text-slate-400"><i class="ph-bold ph-x text-xl"></i></button>
             <h2 class="text-xl font-black mb-4">調査レベルの選択</h2>
             <div class="flex flex-col gap-3">
-                <button onclick="selectDifficulty('basic')" class="w-full bg-emerald-50 border-2 border-emerald-400 text-emerald-800 font-bold py-3 px-4 rounded-xl text-left">
+                <button onclick="selectDifficulty('basic')" class="w-full bg-emerald-50 border-2 border-emerald-400 text-emerald-800 font-bold py-3 px-4 rounded-xl text-left shadow-sm active:scale-95 transition-transform">
                     <div class="font-black text-lg">🌱 基本レベル</div>
                     <div class="text-[10px]">教科書に出る代表的な生物</div>
                 </button>
-                <button onclick="selectDifficulty('advanced')" class="w-full bg-rose-50 border-2 border-rose-400 text-rose-800 font-bold py-3 px-4 rounded-xl text-left">
+                <button onclick="selectDifficulty('advanced')" class="w-full bg-rose-50 border-2 border-rose-400 text-rose-800 font-bold py-3 px-4 rounded-xl text-left shadow-sm active:scale-95 transition-transform">
                     <div class="font-black text-lg">🚀 発展レベル</div>
                     <div class="text-[10px]">全200種からランダム（激ムズ）</div>
                 </button>
@@ -150,6 +164,7 @@
         </div>
     </div>
 
+    <!-- 詳細ファイルモーダル -->
     <div id="modal-detail" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-3xl border-2 border-slate-300 max-w-sm w-full p-5 shadow-2xl relative flex flex-col">
             <button onclick="closeModal('modal-detail')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -162,12 +177,13 @@
             </div>
             <div class="overflow-y-auto custom-scrollbar max-h-[40vh] pr-1 mb-4">
                 <div class="text-xs font-bold text-indigo-600 mb-2 text-left">📝 観察から得られた事実</div>
-                <div id="detail-content" class="bg-slate-50 border rounded-xl p-3"></div>
+                <div id="detail-content" class="bg-slate-50 border border-slate-200 rounded-xl p-3"></div>
             </div>
-            <div id="detail-actions" class="flex flex-col gap-2 pt-2 border-t"></div>
+            <div id="detail-actions" class="flex flex-col gap-2 pt-2 border-t border-slate-200"></div>
         </div>
     </div>
 
+    <!-- 検索表モーダル -->
     <div id="modal-tree" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl relative flex flex-col max-h-[85vh]">
             <button onclick="closeModal('modal-tree')" class="absolute top-3 right-3 text-slate-400"><i class="ph-bold ph-x text-xl"></i></button>
@@ -246,6 +262,7 @@
         </div>
     </div>
 
+    <!-- チュートリアルモーダル -->
     <div id="modal-tutorial" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-tutorial')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -263,12 +280,13 @@
         </div>
     </div>
 
+    <!-- 結果モーダル -->
     <div id="modal-result" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-3xl border-4 border-slate-800 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh]">
             <div class="overflow-y-auto custom-scrollbar pr-1">
                 <div id="res-icon" class="text-6xl mb-2 flex justify-center"></div>
                 <h2 id="res-title" class="text-2xl font-black mb-1"></h2>
-                <p id="res-msg" class="mb-4 font-bold text-sm bg-slate-50 p-3 rounded-lg border"></p>
+                <p id="res-msg" class="mb-4 font-bold text-sm bg-slate-50 p-3 rounded-lg border border-slate-200"></p>
                 <div class="mb-4 text-left bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg">
                     <p class="text-[10px] text-indigo-800 font-bold mb-1">💡 なぜこの分類になるの？</p>
                     <p id="res-exp" class="text-xs text-slate-700 font-medium"></p>
@@ -278,16 +296,19 @@
                     <p id="res-report" class="text-xs font-medium"></p>
                 </div>
             </div>
-            <button onclick="startNewRound()" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl mt-4">次の調査へ</button>
+            <button onclick="startNewRound()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">次の調査へ</button>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // 定数・データ定義
+        // ==========================================
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
         try {
-            if (localStorage.getItem('biodet_v106_animal') === 'true') unlockedStatus.animal = true;
-            if (localStorage.getItem('biodet_v106_mix') === 'true') unlockedStatus.mix = true;
+            if (localStorage.getItem('biodet_v108_animal') === 'true') unlockedStatus.animal = true;
+            if (localStorage.getItem('biodet_v108_mix') === 'true') unlockedStatus.mix = true;
         } catch(e) {}
         
         let pendingMode = "", selectedMode = '', currentDifficulty = 'basic';
@@ -545,6 +566,9 @@
             "a1", "a2", "a3", "a4", "a5", "a13", "a21", "a22", "a23", "a24", "a26", "a36", "a39", "a40", "a41", "a46", "a51", "a52", "a56", "a58", "a59", "a68", "a71", "a73", "a75", "a76", "a80", "a81", "a82", "a85", "a86", "a88", "a91", "a92", "a94", "a96", "a98", "a99"
         ];
 
+        // ==========================================
+        // 各種関数群
+        // ==========================================
         function getTraitSig(bio) { return JSON.stringify(Object.keys(bio.traits).sort().reduce((acc, k) => { acc[k] = bio.traits[k]; return acc; }, {})); }
         function shuffle(arr) { let a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
@@ -638,9 +662,6 @@
             }
         }
 
-        // ==========================================
-        // 2. 状態・ユーティリティ
-        // ==========================================
         let poolData = [], currentCandidates = [], targetBio = null;
         let remQ = 5, askedQ = new Set(), qHistory = [];
         let isOver = false, isWait = false, timerId = null;
@@ -651,9 +672,6 @@
         }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // ==========================================
-        // 3. UI・進行制御
-        // ==========================================
         function attemptStartGame(mode) {
             if (mode === 'plant' || unlockedStatus[mode]) {
                 selectedMode = mode;
@@ -672,7 +690,7 @@
             const val = document.getElementById('password-input').value.trim();
             if (val === PASSWORDS[pendingMode]) {
                 unlockedStatus[pendingMode] = true;
-                try { localStorage.setItem(`biodet_v106_${pendingMode}`, 'true'); } catch(e){}
+                try { localStorage.setItem(`biodet_v108_${pendingMode}`, 'true'); } catch(e){}
                 
                 const btn = document.getElementById(`btn-${pendingMode}`);
                 btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg`;
@@ -729,9 +747,6 @@
             startNewRound();
         }
 
-        // ==========================================
-        // 4. ゲームロジック
-        // ==========================================
         function startNewRound() {
             if (timerId) { clearTimeout(timerId); timerId = null; }
             document.getElementById('global-blocker').classList.add('hidden');
@@ -797,7 +812,6 @@
 
             if (qs.length === 0) return;
 
-            // ★ 質問回数が0回になったら、全ボタンをロック（グレーアウト）する
             const isOutOfQ = remQ <= 0;
 
             qs.forEach(q => {
@@ -805,10 +819,11 @@
                 btn.className = `w-full bg-white border-2 rounded-xl p-3 text-left flex flex-col gap-1.5 transition-all mb-2 ${isOutOfQ ? 'border-slate-200 opacity-50 pointer-events-none' : 'border-slate-300 hover:border-indigo-500 hover:bg-slate-50 active:translate-y-0.5 active:border-b-2'}`;
                 if (!isOutOfQ) btn.onclick = () => askQ(q);
                 
-                // ★ アイコンを撤去し、テキストとタグのみの学術的デザインに
                 btn.innerHTML = `
-                    <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border inline-block w-max ${isOutOfQ ? 'bg-slate-100 text-slate-400 border-slate-200' : q.badgeColor}">${isOutOfQ ? '🔒 ロック' : q.badge}</span>
-                    <p class="text-[12px] sm:text-[13px] font-bold tracking-tight leading-snug whitespace-normal ${isOutOfQ ? 'text-slate-400' : 'text-slate-800'}">${q.text}</p>
+                    <div class="flex-1 min-w-0 flex flex-col gap-1">
+                        <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border inline-block w-max ${isOutOfQ ? 'bg-slate-100 text-slate-400 border-slate-200' : q.badgeColor}">${isOutOfQ ? '🔒 ロック' : q.badge}</span>
+                        <p class="text-[12px] sm:text-[13px] font-bold tracking-tight leading-snug whitespace-normal ${isOutOfQ ? 'text-slate-400' : 'text-slate-800'}">${q.text}</p>
+                    </div>
                 `;
                 container.appendChild(btn);
             });
@@ -894,6 +909,8 @@
             badge.innerText = surCount;
             if(surCount <= 3) badge.className = "bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1 animate-pulse";
             else badge.className = "bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1";
+            
+            renderQ();
         }
 
         function updateQC() {
