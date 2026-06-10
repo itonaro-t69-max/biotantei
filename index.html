@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 v10.8.0</title>
+    <title>バイオ探偵 v11.0.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        /* iOS Safariのバウンス（ゴムバンド効果）を防止する超重要CSS */
+        /* iOS Safariでの画面見切れとバウンスを完全に防ぐ */
         body { 
             background-color: #f8fafc; 
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
@@ -16,6 +16,7 @@
             user-select: none; -webkit-user-select: none;
             touch-action: manipulation; 
             overscroll-behavior-y: none; 
+            height: 100dvh; /* モダンな100%高さ指定 */
         }
         
         button { touch-action: manipulation; outline: none; }
@@ -49,7 +50,7 @@
         .btn-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
     </style>
 </head>
-<body class="text-slate-800 h-screen overflow-hidden flex flex-col">
+<body class="text-slate-800 overflow-hidden flex flex-col">
 
     <div id="global-blocker" class="fixed inset-0 z-[100] hidden"></div>
 
@@ -62,7 +63,7 @@
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
-            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v10.8.0 (クリーンアップ完了版)</span>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v11.0.0 (究極完全版)</span>
 
             <div class="space-y-4 max-w-sm mx-auto">
                 <button onclick="attemptStartGame('plant')" class="w-full bg-emerald-600 hover:bg-emerald-500 border-b-4 border-emerald-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base">
@@ -106,7 +107,7 @@
             <!-- 左/上カラム：チャットと質問 -->
             <div class="w-full h-1/2 md:w-5/12 md:h-full flex flex-col p-1.5 sm:p-3 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
                 <div id="chatHistory" class="flex-none h-[40%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
-                <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden">
+                <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden min-h-0">
                     <div id="loadingOverlay" class="absolute inset-0 bg-white/70 z-20 hidden flex justify-center items-center text-2xl">⏳</div>
                     <p class="text-[10px] text-slate-500 font-black mb-1 flex-none">🔍 特徴を調べる（項目をタップ）</p>
                     <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col pb-2"></div>
@@ -307,8 +308,8 @@
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
         try {
-            if (localStorage.getItem('biodet_v108_animal') === 'true') unlockedStatus.animal = true;
-            if (localStorage.getItem('biodet_v108_mix') === 'true') unlockedStatus.mix = true;
+            if (localStorage.getItem('biodet_v11_animal') === 'true') unlockedStatus.animal = true;
+            if (localStorage.getItem('biodet_v11_mix') === 'true') unlockedStatus.mix = true;
         } catch(e) {}
         
         let pendingMode = "", selectedMode = '', currentDifficulty = 'basic';
@@ -662,6 +663,9 @@
             }
         }
 
+        // ==========================================
+        // 2. 状態・ユーティリティ
+        // ==========================================
         let poolData = [], currentCandidates = [], targetBio = null;
         let remQ = 5, askedQ = new Set(), qHistory = [];
         let isOver = false, isWait = false, timerId = null;
@@ -672,6 +676,9 @@
         }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
+        // ==========================================
+        // 3. UI・進行制御
+        // ==========================================
         function attemptStartGame(mode) {
             if (mode === 'plant' || unlockedStatus[mode]) {
                 selectedMode = mode;
@@ -690,7 +697,7 @@
             const val = document.getElementById('password-input').value.trim();
             if (val === PASSWORDS[pendingMode]) {
                 unlockedStatus[pendingMode] = true;
-                try { localStorage.setItem(`biodet_v108_${pendingMode}`, 'true'); } catch(e){}
+                try { localStorage.setItem(`biodet_v11_${pendingMode}`, 'true'); } catch(e){}
                 
                 const btn = document.getElementById(`btn-${pendingMode}`);
                 btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg`;
@@ -747,6 +754,9 @@
             startNewRound();
         }
 
+        // ==========================================
+        // 4. ゲームロジック
+        // ==========================================
         function startNewRound() {
             if (timerId) { clearTimeout(timerId); timerId = null; }
             document.getElementById('global-blocker').classList.add('hidden');
@@ -814,15 +824,16 @@
 
             const isOutOfQ = remQ <= 0;
 
+            // ★ バグ修正：無駄な解答予測ループ処理（Setを使ったansの計算）を完全削除し、レンダリングを軽量化
             qs.forEach(q => {
                 const btn = document.createElement('button');
-                btn.className = `w-full bg-white border-2 rounded-xl p-3 text-left flex flex-col gap-1.5 transition-all mb-2 ${isOutOfQ ? 'border-slate-200 opacity-50 pointer-events-none' : 'border-slate-300 hover:border-indigo-500 hover:bg-slate-50 active:translate-y-0.5 active:border-b-2'}`;
+                btn.className = `w-full bg-white border-2 rounded-xl p-2.5 sm:p-3 text-left flex flex-col gap-1 transition-all mb-1.5 ${isOutOfQ ? 'border-slate-200 opacity-50 pointer-events-none' : 'border-slate-300 hover:border-indigo-500 hover:bg-slate-50 active:translate-y-0.5 active:border-b-2'}`;
                 if (!isOutOfQ) btn.onclick = () => askQ(q);
                 
                 btn.innerHTML = `
                     <div class="flex-1 min-w-0 flex flex-col gap-1">
                         <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border inline-block w-max ${isOutOfQ ? 'bg-slate-100 text-slate-400 border-slate-200' : q.badgeColor}">${isOutOfQ ? '🔒 ロック' : q.badge}</span>
-                        <p class="text-[12px] sm:text-[13px] font-bold tracking-tight leading-snug whitespace-normal ${isOutOfQ ? 'text-slate-400' : 'text-slate-800'}">${q.text}</p>
+                        <p class="text-[11px] sm:text-[12px] font-bold tracking-tight leading-snug whitespace-normal ${isOutOfQ ? 'text-slate-400' : 'text-slate-800'}">${q.text}</p>
                     </div>
                 `;
                 container.appendChild(btn);
@@ -878,7 +889,11 @@
                 d.innerHTML = `<span class="text-[9px] sm:text-[10px] opacity-70 block mb-0.5 font-bold tracking-wide">対象生物X</span><span class="flex items-start gap-1"><i class="ph-bold ${ic} text-base sm:text-lg mt-0.5"></i> <span>${txt}</span></span>`;
             }
             box.appendChild(d);
-            box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+            
+            // ★ バグ修正：DOMが確実に描画されてから一番下までスクロールさせる
+            requestAnimationFrame(() => {
+                box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+            });
         }
 
         function renderCards() {
