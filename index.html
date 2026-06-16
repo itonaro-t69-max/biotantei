@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 v11.0.0</title>
+    <title>バイオ探偵 v13.1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        /* iOS Safariでの画面見切れとバウンスを完全に防ぐ */
+        /* iOS Safariのバウンスと見切れを完全に防ぐ */
         body { 
             background-color: #f8fafc; 
             background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
@@ -16,17 +17,19 @@
             user-select: none; -webkit-user-select: none;
             touch-action: manipulation; 
             overscroll-behavior-y: none; 
-            height: 100dvh; /* モダンな100%高さ指定 */
+            height: 100dvh; 
         }
         
         button { touch-action: manipulation; outline: none; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
         .candidate-card.eliminated { 
-            opacity: 0.35; 
+            opacity: 0.4; 
             transform: scale(0.95); 
             filter: grayscale(100%); 
-            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.8), rgba(255,255,255,0.8) 10px, rgba(226,232,240,0.8) 10px, rgba(226,232,240,0.8) 20px);
-            border-color: #cbd5e1;
+            background: repeating-linear-gradient(45deg, #f8fafc, #f8fafc 10px, #e2e8f0 10px, #e2e8f0 20px) !important;
+            border-color: #cbd5e1 !important;
+            color: #64748b !important;
         }
         .candidate-card { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         .btn-accuse-disabled { opacity: 0.3; pointer-events: none; }
@@ -36,34 +39,34 @@
         .chat-a-yes { background-color: #dbeafe; color: #1e3a8a; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #2563eb; }
         .chat-a-no { background-color: #ffedd5; color: #7c2d12; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #ea580c; }
         .chat-a-invalid { background-color: #f1f5f9; color: #334155; border-bottom-left-radius: 0.25rem; margin-right: auto; border-left: 4px solid #64748b; }
+        
         @keyframes slideIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 
         .progress-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-
         .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .btn-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
 
         .tree-ul { list-style: none; border-left: 2px solid #cbd5e1; margin-left: 0.5rem; padding-left: 0.5rem; margin-top: 0.5rem; }
         .tree-li { margin-bottom: 0.4rem; position: relative; font-size: 0.85rem; font-weight: bold; color: #334155; }
         .tree-li::before { content: ""; position: absolute; left: -0.5rem; top: 0.5rem; width: 0.5rem; border-top: 2px solid #cbd5e1; }
-        .btn-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
     </style>
 </head>
 <body class="text-slate-800 overflow-hidden flex flex-col">
 
     <div id="global-blocker" class="fixed inset-0 z-[100] hidden"></div>
 
-    <!-- ========================================== -->
     <!-- 画面1: メニュー -->
-    <!-- ========================================== -->
     <div id="screen-menu" class="absolute inset-0 z-40 bg-slate-800 text-white flex flex-col justify-center items-center p-4 sm:p-6 overflow-y-auto">
         <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at center, #ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
         <div class="relative z-10 max-w-lg w-full text-center py-6">
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
-            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v11.0.0 (究極完全版)</span>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v13.1.1 (バグ完全排除版)</span>
 
             <div class="space-y-4 max-w-sm mx-auto">
                 <button onclick="attemptStartGame('plant')" class="w-full bg-emerald-600 hover:bg-emerald-500 border-b-4 border-emerald-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base">
@@ -78,14 +81,20 @@
                     <span class="flex items-center gap-3"><i id="icon-mix-lock" class="ph-fill ph-lock-key text-2xl"></i> <span id="text-mix">ごちゃまぜ調査 <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full">14種</span></span></span>
                     <i class="ph-bold ph-caret-right"></i>
                 </button>
+
+                <!-- 図鑑ボタン -->
+                <div class="pt-4 border-t border-slate-600/50 mt-4">
+                    <button onclick="openEncyclopedia()" class="w-full bg-slate-700 hover:bg-slate-600 border-b-4 border-slate-900 text-slate-200 font-bold py-3 px-4 rounded-xl transition-all flex justify-between items-center shadow-md active:translate-y-1 active:border-b-0">
+                        <span class="flex items-center gap-2"><i class="ph-fill ph-books text-xl text-yellow-400"></i> 調査ファイル（図鑑）</span>
+                        <span id="encyclopedia-count" class="text-xs bg-slate-800 text-yellow-400 px-2.5 py-1 rounded-full font-black border border-slate-600">0/200</span>
+                    </button>
+                </div>
             </div>
-            <button onclick="openModal('modal-tutorial')" class="mt-8 text-sm text-slate-400 underline font-bold hover:text-white transition-colors">📖 探偵学校（遊び方）</button>
+            <button onclick="openModal('modal-tutorial')" class="mt-6 text-sm text-slate-400 underline font-bold hover:text-white transition-colors">📖 探偵学校（遊び方）</button>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 画面2: ゲーム画面 (上下/左右分割レイアウト) -->
-    <!-- ========================================== -->
+    <!-- 画面2: ゲーム画面 -->
     <div id="screen-game" class="hidden flex-1 flex-col h-full bg-slate-50 relative">
         <div class="bg-white shadow-sm z-20 p-2 border-b border-slate-200 flex-none">
             <div class="flex justify-between items-center mb-1.5 px-1 max-w-6xl mx-auto">
@@ -104,34 +113,76 @@
         </div>
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full">
-            <!-- 左/上カラム：チャットと質問 -->
-            <div class="w-full h-1/2 md:w-5/12 md:h-full flex flex-col p-1.5 sm:p-3 border-b md:border-b-0 md:border-r border-slate-200 relative overflow-hidden">
-                <div id="chatHistory" class="flex-none h-[40%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
+            <div id="pane-investigate" class="w-full md:w-5/12 h-full flex flex-col p-1.5 sm:p-3 md:border-r border-slate-200 relative overflow-hidden transition-opacity">
+                <div id="chatHistory" class="flex-none h-[45%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
                 <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden min-h-0">
                     <div id="loadingOverlay" class="absolute inset-0 bg-white/70 z-20 hidden flex justify-center items-center text-2xl">⏳</div>
                     <p class="text-[10px] text-slate-500 font-black mb-1 flex-none">🔍 特徴を調べる（項目をタップ）</p>
                     <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col pb-2"></div>
                 </div>
             </div>
-            <!-- 右/下カラム：候補リスト -->
-            <div class="w-full h-1/2 md:w-7/12 md:h-full flex flex-col p-1.5 sm:p-3 bg-slate-200/50 relative overflow-hidden">
+
+            <div id="pane-candidates" class="w-full md:w-7/12 h-full hidden md:flex flex-col p-1.5 sm:p-3 bg-slate-200/50 relative overflow-hidden transition-opacity">
                 <div class="flex-none mb-1 flex justify-between items-center px-1">
                     <p class="text-xs text-slate-600 font-bold flex items-center gap-1">
                         <i class="ph-fill ph-files text-indigo-600"></i> 候補リスト 
-                        <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1">16</span>
+                        <span id="nav-survivor-badge" class="bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1"></span>
                     </p>
-                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded shadow active:scale-95 transition-colors">🔄 リセット</button>
+                    <button onclick="startNewRound()" class="text-[9px] bg-slate-700 hover:bg-slate-800 text-white px-2 py-1 rounded shadow active:scale-95 transition-colors">🔄 やり直す</button>
                 </div>
-                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid grid-cols-4 sm:grid-cols-5 md:grid-cols-4 lg:grid-cols-5 gap-1.5 content-start pb-2"></div>
+                
+                <div id="cardsArea" class="flex-1 overflow-y-auto custom-scrollbar grid content-start pb-2"></div>
+                
+                <div id="evidenceBoard" class="flex-none mt-1 p-2 sm:p-2.5 bg-indigo-50/80 border border-indigo-200 rounded-xl hidden shadow-sm max-h-[40%] md:max-h-[35%] overflow-y-auto custom-scrollbar">
+                    <div class="text-[10px] text-indigo-800 font-bold mb-1.5 flex items-center gap-1">
+                        <i class="ph-bold ph-push-pin"></i> 判明した事実（証拠ボード）
+                    </div>
+                    <div id="evidenceTags" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:hidden flex-none bg-white border-t border-slate-200 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-30">
+            <div class="flex h-14">
+                <button onclick="switchTab('investigate')" id="tab-btn-investigate" class="flex-1 flex flex-col items-center justify-center gap-0.5 text-indigo-600 bg-indigo-50 font-bold transition-colors border-t-2 border-indigo-600">
+                    <i class="ph-fill ph-magnifying-glass text-xl"></i>
+                    <span class="text-[10px]">調査室</span>
+                </button>
+                <button onclick="switchTab('candidates')" id="tab-btn-candidates" class="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:bg-slate-50 font-bold transition-colors border-t-2 border-transparent relative">
+                    <i class="ph-fill ph-files text-xl"></i>
+                    <span class="text-[10px]">候補リスト</span>
+                    <span id="tab-survivor-badge" class="absolute top-1.5 right-[20%] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full text-[9px] shadow-sm transition-colors hidden"></span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- モーダル群 -->
-    <!-- ========================================== -->
+    <!-- 画面3: 図鑑画面 -->
+    <div id="screen-encyclopedia" class="hidden flex-1 flex-col h-full bg-slate-100 relative">
+        <div class="bg-slate-800 text-white shadow-md z-20 p-3 flex-none flex justify-between items-center">
+            <div class="flex flex-col">
+                <span class="font-black text-sm sm:text-base flex items-center gap-1"><i class="ph-fill ph-books text-yellow-400"></i> 探偵調査ファイル</span>
+                <span id="encyclopedia-progress-text" class="text-[10px] text-slate-300 font-bold">達成率: 0 / 200</span>
+            </div>
+            <button onclick="showScreen('screen-menu')" class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-1.5 px-4 rounded-lg text-xs border border-slate-700 shadow-sm transition-colors active:scale-95">戻る</button>
+        </div>
+        
+        <div class="w-full bg-slate-700 h-1.5 flex-none shadow-inner">
+            <div id="encyclopedia-progress-bar" class="bg-yellow-400 h-full transition-all duration-1000 ease-out" style="width: 0%;"></div>
+        </div>
 
-    <!-- 合言葉モーダル -->
+        <div class="flex bg-slate-200 p-1.5 flex-none gap-1 shadow-sm">
+            <button onclick="filterEncyclopedia('all')" id="tab-enc-all" class="flex-1 bg-white font-black text-xs py-2.5 rounded-lg shadow-sm text-indigo-700 transition-colors">すべて</button>
+            <button onclick="filterEncyclopedia('plant')" id="tab-enc-plant" class="flex-1 bg-slate-300/50 text-slate-500 font-bold text-xs py-2.5 rounded-lg hover:bg-slate-300 transition-colors">植物</button>
+            <button onclick="filterEncyclopedia('animal')" id="tab-enc-animal" class="flex-1 bg-slate-300/50 text-slate-500 font-bold text-xs py-2.5 rounded-lg hover:bg-slate-300 transition-colors">動物</button>
+        </div>
+
+        <div id="encyclopedia-grid" class="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 content-start pb-safe">
+            <!-- 図鑑カード -->
+        </div>
+    </div>
+
+    <!-- モーダル群 -->
     <div id="modal-password" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-password')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -147,7 +198,6 @@
         </div>
     </div>
 
-    <!-- 難易度モーダル -->
     <div id="modal-difficulty" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-difficulty')" class="absolute top-3 right-3 text-slate-400"><i class="ph-bold ph-x text-xl"></i></button>
@@ -165,15 +215,14 @@
         </div>
     </div>
 
-    <!-- 詳細ファイルモーダル -->
     <div id="modal-detail" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div class="bg-white rounded-3xl border-2 border-slate-300 max-w-sm w-full p-5 shadow-2xl relative flex flex-col">
             <button onclick="closeModal('modal-detail')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
             <div class="flex items-center gap-3 mb-4 border-b pb-3">
-                <span id="detail-emoji" class="text-5xl bg-slate-50 border rounded-full w-16 h-16 flex items-center justify-center"></span>
-                <div class="text-left">
+                <span id="detail-emoji" class="text-4xl bg-slate-50 border rounded-full w-16 h-16 flex items-center justify-center"></span>
+                <div class="text-left flex-1">
                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SPECIMEN FILE</div>
-                    <h2 id="detail-name" class="font-black text-2xl text-slate-800"></h2>
+                    <h2 id="detail-name" class="font-black text-2xl text-slate-800 break-words leading-tight"></h2>
                 </div>
             </div>
             <div class="overflow-y-auto custom-scrollbar max-h-[40vh] pr-1 mb-4">
@@ -189,7 +238,7 @@
         <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl relative flex flex-col max-h-[85vh]">
             <button onclick="closeModal('modal-tree')" class="absolute top-3 right-3 text-slate-400"><i class="ph-bold ph-x text-xl"></i></button>
             <h2 class="font-black text-xl mb-3">🗺️ 分類検索表</h2>
-            <div id="tree-content" class="overflow-y-auto custom-scrollbar flex-1 pr-2">
+            <div id="tree-content" class="overflow-y-auto custom-scrollbar flex-1 pr-2 pb-12">
                 <div class="bg-white border-2 border-slate-200 p-3 rounded-xl text-left mb-3">
                     <div class="font-black text-emerald-800 text-sm mb-1 flex items-center gap-1"><i class="ph-fill ph-leaf"></i> 植物の分類</div>
                     <ul class="tree-ul">
@@ -246,13 +295,14 @@
                                 <li class="tree-li">外骨格と足に節がある（節足動物）
                                     <ul class="tree-ul">
                                         <li class="tree-li">頭・胸・腹の3つに分かれる ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">昆虫類</span></li>
-                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">甲殻類、クモ類等</span></li>
+                                        <li class="tree-li">硬い殻（甲羅）で覆われている ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">甲殻類</span></li>
+                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">節足動物その他</span></li>
                                     </ul>
                                 </li>
                                 <li class="tree-li">外骨格も節もない
                                     <ul class="tree-ul">
-                                        <li class="tree-li">筋肉の足（軟体）がある ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">軟体動物</span></li>
-                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">棘皮動物等</span></li>
+                                        <li class="tree-li">外とう膜（筋肉の膜）がある ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">軟体動物</span></li>
+                                        <li class="tree-li">その他 ➡️ <span class="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">無脊椎動物その他</span></li>
                                     </ul>
                                 </li>
                             </ul>
@@ -263,7 +313,7 @@
         </div>
     </div>
 
-    <!-- チュートリアルモーダル -->
+    <!-- 遊び方モーダル -->
     <div id="modal-tutorial" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-tutorial')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -271,9 +321,9 @@
             <h2 class="font-black text-2xl mb-4 text-slate-800">探偵学校（遊び方）</h2>
             <div class="text-left text-sm font-bold leading-relaxed text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <p class="mb-2">① リストの中に1種だけいる「生物X」を同定せよ。</p>
-                <p class="mb-2">② <span class="text-indigo-600">「💬特徴を調べる」</span>エリアから質問をして、生物Xの事実を聞き出そう。</p>
-                <p class="mb-2">③ <span class="text-slate-600">「🗂️候補リスト」</span>からカードを開いて観察メモを読み、事実と合わない生物は自分で考えて<span class="text-slate-400">「❌候補から外す」</span>を押して暗転させよう。</p>
-                <p>④ 迷ったら<span class="text-emerald-600">「🗺️検索表」</span>と事実を見比べて推理し、最後に「🎯 同定する」を押せ！</p>
+                <p class="mb-2">② <span class="text-indigo-600">「💬特徴を調べる」</span>から質問をして事実を聞き出そう。</p>
+                <p class="mb-2">③ <span class="text-slate-600">「🗂️候補リスト」</span>からカードを開き、事実と合わない生物は自分で<span class="text-slate-400">「❌外す」</span>を押して暗転させよう。</p>
+                <p>④ 迷ったら<span class="text-emerald-600">「🗺️検索表」</span>と、下部に出る<span class="text-indigo-600">「📌証拠ボード」</span>を見比べて推理し、最後に「🎯 同定する」を押せ！</p>
             </div>
             <button onclick="closeModal('modal-tutorial')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 mt-4 text-lg">
                 調査を始める
@@ -283,36 +333,50 @@
 
     <!-- 結果モーダル -->
     <div id="modal-result" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-3xl border-4 border-slate-800 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh]">
+        <div id="modal-result-box" class="bg-white rounded-3xl border-4 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh] transition-all duration-300">
             <div class="overflow-y-auto custom-scrollbar pr-1">
-                <div id="res-icon" class="text-6xl mb-2 flex justify-center"></div>
-                <h2 id="res-title" class="text-2xl font-black mb-1"></h2>
-                <p id="res-msg" class="mb-4 font-bold text-sm bg-slate-50 p-3 rounded-lg border border-slate-200"></p>
-                <div class="mb-4 text-left bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-lg">
-                    <p class="text-[10px] text-indigo-800 font-bold mb-1">💡 なぜこの分類になるの？</p>
+                <div class="relative inline-block mb-2 mt-2">
+                    <div id="res-icon" class="text-7xl relative z-10"></div>
+                    <div id="res-icon-bg" class="absolute inset-0 rounded-full blur-xl z-0 scale-150"></div>
+                </div>
+                <h2 id="res-title" class="font-black mb-2 tracking-wider"></h2>
+                <p id="res-msg" class=""></p>
+                
+                <div class="mb-4 text-left bg-slate-50 border-l-4 border-slate-400 p-3 rounded-r-lg shadow-sm">
+                    <p class="text-[10px] text-slate-500 font-bold mb-1 flex items-center gap-1"><i class="ph-bold ph-lightbulb"></i> なぜこの分類になるの？</p>
                     <p id="res-exp" class="text-xs text-slate-700 font-medium"></p>
                 </div>
-                <div class="mb-2 text-left bg-slate-800 text-white p-3 rounded-xl">
-                    <p class="text-[10px] text-slate-300 font-bold mb-1.5">📋 調査レポート</p>
-                    <p id="res-report" class="text-xs font-medium"></p>
+                
+                <div class="mb-2 text-left bg-slate-800 text-white p-3 rounded-xl relative overflow-hidden shadow-inner">
+                    <div class="absolute -right-3 -top-3 opacity-10 text-6xl"><i class="ph-fill ph-seal-check"></i></div>
+                    <p class="text-[10px] text-slate-300 font-bold mb-1.5 flex items-center gap-1 relative z-10"><i class="ph-fill ph-clipboard-text"></i> 探偵長からの評価</p>
+                    <p id="res-report" class="text-xs font-medium relative z-10 leading-relaxed"></p>
                 </div>
             </div>
-            <button onclick="startNewRound()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1">次の調査へ</button>
+            <button onclick="startNewRound()" id="btn-next-round" class="w-full font-bold py-3.5 rounded-xl mt-4 border-b-4 active:border-b-0 active:translate-y-1 transition-all"></button>
         </div>
     </div>
 
+    <!-- アプリケーションのスクリプト -->
     <script>
         // ==========================================
-        // 定数・データ定義
+        // 状態管理・定数定義
         // ==========================================
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
+        let unlockedBios = new Set();
+
         try {
-            if (localStorage.getItem('biodet_v11_animal') === 'true') unlockedStatus.animal = true;
-            if (localStorage.getItem('biodet_v11_mix') === 'true') unlockedStatus.mix = true;
+            if (localStorage.getItem('biodet_v13_animal') === 'true') unlockedStatus.animal = true;
+            if (localStorage.getItem('biodet_v13_mix') === 'true') unlockedStatus.mix = true;
+            const savedBios = localStorage.getItem('biodet_unlocked_bios');
+            if (savedBios) unlockedBios = new Set(JSON.parse(savedBios));
         } catch(e) {}
         
         let pendingMode = "", selectedMode = '', currentDifficulty = 'basic';
+        let cardSizeClasses = { minH: "", name: "" }; 
+        let currentTab = 'investigate'; 
+        let currentEncFilter = 'all';
 
         const qList = [
             { key: "isPlant", category: "basic", badge: "生命活動", badgeColor: "bg-amber-100 text-amber-800 border-amber-300", text: "自分で養分をつくりますか（光合成）？", yes: "光合成をします（植物です）。", no: "他の生物を食べて養分にします（動物です）。" },
@@ -327,10 +391,11 @@
             { key: "shellEgg", category: "animal", badge: "ふえ方", badgeColor: "bg-yellow-100 text-yellow-800 border-yellow-300", text: "殻のある卵を陸上に産みますか？", yes: "殻のある卵です。", no: "水中に殻のない卵を産みます。", inv: "変温動物ではないため当てはまりません。" },
             { key: "gillsForever", category: "animal", badge: "呼吸", badgeColor: "bg-sky-100 text-sky-800 border-sky-300", text: "一生エラ呼吸をしますか？", yes: "一生エラ呼吸です（魚類等）。", no: "大人は肺や皮膚で呼吸します（両生類等）。", inv: "脊椎動物ではないため当てはまりません。" },
             { key: "arthropod", category: "animal", badge: "からだ", badgeColor: "bg-stone-100 text-stone-800 border-stone-300", text: "足に節（関節）がありますか？", yes: "節足動物です。", no: "違います。", inv: "無脊椎動物ではないため当てはまりません。" },
-            { key: "insect", category: "animal", badge: "からだ", badgeColor: "bg-orange-100 text-orange-800 border-orange-300", text: "体は「頭・胸・腹」の3つに分かれますか？", yes: "昆虫類です。", no: "違います。", inv: "節足動物ではないため当てはまりません。" }
+            { key: "insect", category: "animal", badge: "からだ", badgeColor: "bg-orange-100 text-orange-800 border-orange-300", text: "体は「頭・胸・腹」の3つに分かれますか？", yes: "昆虫類です。", no: "違います。", inv: "節足動物ではないため当てはまりません。" },
+            { key: "crustacean", category: "animal", badge: "からだ", badgeColor: "bg-amber-100 text-amber-800 border-amber-300", text: "硬い殻（甲羅）で覆われていますか？", yes: "甲殻類です。", no: "違います。", inv: "節足動物ではない、または昆虫類であるため当てはまりません。" },
+            { key: "mollusk", category: "animal", badge: "からだ", badgeColor: "bg-rose-100 text-rose-800 border-rose-300", text: "内臓は筋肉の膜（外とう膜）で包まれていますか？", yes: "軟体動物です。", no: "違います。", inv: "節足動物以外の無脊椎動物ではないため当てはまりません。" }
         ];
 
-        // 200種の完全手動データベース
         const biologyData = [
             // --- 双子葉類・合弁花類 ---
             { id: "p1", mode: "plant", name: "アサガオ", traits: { isPlant: true, seed: true, ovary: true, cotyledon: true, petalJoined: true, vessels: true } },
@@ -537,60 +602,101 @@
             { id: "a80", mode: "animal", name: "アリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: true } },
             
             // --- 節足動物（甲殻類・クモ類・多足類） ---
-            { id: "a81", mode: "animal", name: "ザリガニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a82", mode: "animal", name: "カニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a83", mode: "animal", name: "エビ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a84", mode: "animal", name: "ヤドカリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a85", mode: "animal", name: "ダンゴムシ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a86", mode: "animal", name: "クモ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a87", mode: "animal", name: "サソリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a88", mode: "animal", name: "ムカデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a89", mode: "animal", name: "ヤスデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
-            { id: "a90", mode: "animal", name: "ダニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false } },
+            { id: "a81", mode: "animal", name: "ザリガニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: true } },
+            { id: "a82", mode: "animal", name: "カニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: true } },
+            { id: "a83", mode: "animal", name: "エビ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: true } },
+            { id: "a84", mode: "animal", name: "ヤドカリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: true } },
+            { id: "a85", mode: "animal", name: "ダンゴムシ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: true } },
+            { id: "a86", mode: "animal", name: "クモ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: false } },
+            { id: "a87", mode: "animal", name: "サソリ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: false } },
+            { id: "a88", mode: "animal", name: "ムカデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: false } },
+            { id: "a89", mode: "animal", name: "ヤスデ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: false } },
+            { id: "a90", mode: "animal", name: "ダニ", traits: { isPlant: false, backbone: false, arthropod: true, insect: false, crustacean: false } },
             
             // --- その他の無脊椎動物（軟体動物など） ---
-            { id: "a91", mode: "animal", name: "マイマイ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a92", mode: "animal", name: "イカ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a93", mode: "animal", name: "タコ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a94", mode: "animal", name: "アサリ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a95", mode: "animal", name: "ホタテガイ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a96", mode: "animal", name: "ウニ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a97", mode: "animal", name: "ヒトデ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a98", mode: "animal", name: "ミミズ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a99", mode: "animal", name: "クラゲ", traits: { isPlant: false, backbone: false, arthropod: false } },
-            { id: "a100", mode: "animal", name: "イソギンチャク", traits: { isPlant: false, backbone: false, arthropod: false } }
+            { id: "a91", mode: "animal", name: "マイマイ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: true } },
+            { id: "a92", mode: "animal", name: "イカ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: true } },
+            { id: "a93", mode: "animal", name: "タコ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: true } },
+            { id: "a94", mode: "animal", name: "アサリ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: true } },
+            { id: "a95", mode: "animal", name: "ホタテガイ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: true } },
+            { id: "a96", mode: "animal", name: "ウニ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } },
+            { id: "a97", mode: "animal", name: "ヒトデ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } },
+            { id: "a98", mode: "animal", name: "ミミズ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } },
+            { id: "a99", mode: "animal", name: "クラゲ", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } },
+            { id: "a100", mode: "animal", name: "イソギンチャク", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } }
         ];
 
-        // 教科書レベルの基本ID群（全分類を網羅）
+        // 教科書レベルの基本ID群
         const basicIds = [
             "p1", "p2", "p3", "p8", "p21", "p22", "p23", "p24", "p41", "p42", "p44", "p45", "p61", "p62", "p63", "p76", "p77", "p78", "p91", "p92", 
             "a1", "a2", "a3", "a4", "a5", "a13", "a21", "a22", "a23", "a24", "a26", "a36", "a39", "a40", "a41", "a46", "a51", "a52", "a56", "a58", "a59", "a68", "a71", "a73", "a75", "a76", "a80", "a81", "a82", "a85", "a86", "a88", "a91", "a92", "a94", "a96", "a98", "a99"
         ];
 
-        // ==========================================
-        // 各種関数群
-        // ==========================================
+        let poolData = [], currentCandidates = [], targetBio = null;
+        let remQ = 5, askedQ = new Set(), qHistory = [];
+        let isOver = false, isWait = false, timerId = null;
+
         function getTraitSig(bio) { return JSON.stringify(Object.keys(bio.traits).sort().reduce((acc, k) => { acc[k] = bio.traits[k]; return acc; }, {})); }
         function shuffle(arr) { let a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-        function getBioEmoji(b) {
-            const t = b.traits;
-            if (b.mode === 'plant') {
-                if (t.vessels === false) return '🪨';
-                if (t.seed === false) return '🌿';
-                if (t.ovary === false) return '🌲';
-                if (t.cotyledon === false) return '🌾';
-                return '🌸';
-            } else {
-                if (t.insect) return '🦋';
-                if (t.arthropod) return '🦀';
-                if (t.backbone === false) return '🐌';
-                if (t.gillsForever) return '🐟';
-                if (t.shellEgg === false) return '🐸';
-                if (t.shellEgg === true && t.warmBlooded === false) return '🦎';
-                if (t.warmBlooded && t.viviparous === false) return '🕊️';
-                return '🐶';
+        function openModal(id) { 
+            document.querySelectorAll('.fixed.z-50').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden'); 
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const paneInv = document.getElementById('pane-investigate');
+            const paneCand = document.getElementById('pane-candidates');
+            const btnInv = document.getElementById('tab-btn-investigate');
+            const btnCand = document.getElementById('tab-btn-candidates');
+
+            if (window.innerWidth >= 768) {
+                paneInv.classList.remove('hidden');
+                paneInv.classList.add('flex');
+                paneCand.classList.remove('hidden');
+                paneCand.classList.add('flex');
+                return;
             }
+
+            if (tab === 'investigate') {
+                paneInv.classList.remove('hidden');
+                paneInv.classList.add('flex');
+                paneCand.classList.add('hidden');
+                paneCand.classList.remove('flex');
+                if(btnInv) btnInv.className = "flex-1 flex flex-col items-center justify-center gap-0.5 text-indigo-600 bg-indigo-50 font-bold transition-colors border-t-2 border-indigo-600";
+                if(btnCand) btnCand.className = "flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:bg-slate-50 font-bold transition-colors border-t-2 border-transparent relative";
+            } else {
+                paneInv.classList.add('hidden');
+                paneInv.classList.remove('flex');
+                paneCand.classList.remove('hidden');
+                paneCand.classList.add('flex');
+                if(btnInv) btnInv.className = "flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:bg-slate-50 font-bold transition-colors border-t-2 border-transparent";
+                if(btnCand) btnCand.className = "flex-1 flex flex-col items-center justify-center gap-0.5 text-indigo-600 bg-indigo-50 font-bold transition-colors border-t-2 border-indigo-600 relative";
+            }
+        }
+
+        window.addEventListener('resize', () => { switchTab(currentTab); });
+
+        function showScreen(id) {
+            document.getElementById('screen-menu').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-encyclopedia').classList.add('hidden');
+            document.getElementById(id).classList.remove('hidden');
+            if(id === 'screen-game') {
+                document.getElementById(id).classList.add('flex');
+                switchTab('investigate'); 
+            }
+        }
+
+        function returnToMenu() {
+            if (timerId) { clearTimeout(timerId); timerId = null; }
+            isWait = false;
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('global-blocker').classList.add('hidden');
+            closeModal('modal-result');
+            showScreen('screen-menu');
         }
 
         function getFactSheetHTML(b) {
@@ -629,9 +735,20 @@
                 } else {
                     if (t.arthropod) {
                         html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐞</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体や足に節（関節）があり、外骨格で覆われている。</div></li>';
-                        html += t.insect ? '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐜</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体が「頭・胸・腹」の3つに分かれており、足は6本ある。</div></li>' : '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🦐</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体は「頭・胸・腹」の3つには分かれていない。</div></li>';
+                        if (t.insect) {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐜</span> <div class="text-xs sm:text-sm font-bold text-slate-700">体が「頭・胸・腹」の3つに分かれており、足は6本ある。</div></li>';
+                        } else if (t.crustacean) {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🦐</span> <div class="text-xs sm:text-sm font-bold text-slate-700">硬い殻（甲羅）で覆われている。</div></li>';
+                        } else {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🕷️</span> <div class="text-xs sm:text-sm font-bold text-slate-700">昆虫類でも甲殻類でもない（クモ類など）。</div></li>';
+                        }
                     } else {
                         html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐌</span> <div class="text-xs sm:text-sm font-bold text-slate-700">外骨格はなく、足に節もない。</div></li>';
+                        if (t.mollusk) {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🐙</span> <div class="text-xs sm:text-sm font-bold text-slate-700">内臓が筋肉の膜（外とう膜）で包まれている。</div></li>';
+                        } else if (t.mollusk === false) {
+                            html += '<li class="flex gap-2 border-b border-dashed border-slate-200 pb-1.5"><span class="text-xl">🪱</span> <div class="text-xs sm:text-sm font-bold text-slate-700">軟体動物ではない（棘皮動物など）。</div></li>';
+                        }
                     }
                 }
             }
@@ -642,50 +759,109 @@
         function getExplanation(b) {
             const t = b.traits;
             if (t.isPlant) {
-                if (!t.vessels) return "維管束がなく胞子で増えるため「コケ植物」です。";
-                if (!t.seed) return "維管束がありますが、胞子で増えるため「シダ植物」です。";
-                if (!t.ovary) return "胚珠がむき出しのため「裸子植物」です。";
-                if (!t.cotyledon) return "子房があり（被子植物）、子葉が1枚のため「単子葉類」です。";
-                if (t.petalJoined) return "子葉が2枚（双子葉類）で、花びらがくっついているため「合弁花類」です。";
-                return "子葉が2枚（双子葉類）で、花びらが離れているため「離弁花類」です。";
+                if (!t.vessels) return "維管束がなく胞子で増えるため「コケ植物」だ。日陰でよく見かけるぞ。";
+                if (!t.seed) return "維管束はあるが、胞子で増えるため「シダ植物」だ。ワラビなどがこれにあたる。";
+                if (!t.ovary) return "胚珠がむき出しになっているため「裸子植物」だ。松ぼっくりを思い出してくれ。";
+                if (!t.cotyledon) return "子房があり（被子植物）、子葉が1枚のため「単子葉類」だ。葉の筋が平行になっているはずだ。";
+                if (t.petalJoined) return "子葉が2枚（双子葉類）で、花びらが元でくっついているため「合弁花類」だ。";
+                return "子葉が2枚（双子葉類）で、花びらが1枚1枚離れているため「離弁花類」だ。";
             } else {
                 if (t.backbone) {
-                    if (t.viviparous) return "背骨があり、体温が一定で胎生のため「哺乳類」です。";
-                    if (t.warmBlooded) return "背骨があり、体温が一定で卵生のため「鳥類」です。";
-                    if (t.shellEgg) return "変温動物で、殻のある卵を陸上に産むため「爬虫類」です。";
-                    if (t.gillsForever) return "一生エラ呼吸をするため「魚類」です。";
-                    return "水中に殻のない卵を産み、大人は肺呼吸になるため「両生類」です。";
+                    if (t.viviparous) return "背骨があり、体温が一定で胎生（子宮で育つ）のため「哺乳類」だ。我々ヒトもこれだ。";
+                    if (t.warmBlooded) return "背骨があり、体温が一定で卵生のため「鳥類」だ。";
+                    if (t.shellEgg) return "変温動物で、殻のある卵を陸上に産むため「爬虫類」だ。";
+                    if (t.gillsForever) return "一生エラ呼吸をするため「魚類」だ。";
+                    return "水中に殻のない卵を産み、大人は肺呼吸になるため「両生類」だ。カエルを想像してくれ。";
                 } else {
-                    if (t.insect) return "外骨格があり、体が頭・胸・腹に分かれているため「昆虫類」です。";
-                    if (t.arthropod) return "外骨格がありますが、昆虫ではないため「甲殻類やクモ類など」の節足動物です。";
-                    return "背骨も外骨格もない無脊椎動物（軟体動物など）です。";
+                    if (t.insect) return "外骨格があり、体が『頭・胸・腹』に分かれているため「昆虫類」だ。足は6本だぞ。";
+                    if (t.crustacean) return "外骨格があり、硬い殻（甲羅）で覆われているため「甲殻類」だ。エビやカニの仲間だな。";
+                    if (t.arthropod) return "外骨格はあるが、昆虫でも甲殻類でもないため「節足動物その他（クモ類など）」だ。";
+                    if (t.mollusk) return "背骨も外骨格もなく、内臓が外とう膜で包まれているため「軟体動物」だ。イカやタコなどだ。";
+                    return "背骨も外骨格もなく、軟体動物でもないため「無脊椎動物その他（棘皮動物など）」だ。";
                 }
             }
         }
 
-        // ==========================================
-        // 2. 状態・ユーティリティ
-        // ==========================================
-        let poolData = [], currentCandidates = [], targetBio = null;
-        let remQ = 5, askedQ = new Set(), qHistory = [];
-        let isOver = false, isWait = false, timerId = null;
-
-        function openModal(id) { 
-            document.querySelectorAll('.fixed.z-50').forEach(el => el.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden'); 
+        function updateEncyclopediaCount() {
+            const el = document.getElementById('encyclopedia-count');
+            if (el) el.innerText = `${unlockedBios.size} / 200`;
         }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // ==========================================
-        // 3. UI・進行制御
-        // ==========================================
+        function openEncyclopedia() {
+            showScreen('screen-encyclopedia');
+            updateEncyclopediaCount();
+            document.getElementById('encyclopedia-progress-text').innerText = `達成率: ${unlockedBios.size} / 200`;
+            setTimeout(() => {
+                document.getElementById('encyclopedia-progress-bar').style.width = `${(unlockedBios.size / 200) * 100}%`;
+            }, 50);
+            filterEncyclopedia(currentEncFilter);
+        }
+
+        function filterEncyclopedia(filter) {
+            currentEncFilter = filter;
+            
+            ['all', 'plant', 'animal'].forEach(f => {
+                const btn = document.getElementById(`tab-enc-${f}`);
+                if(f === filter) {
+                    btn.className = "flex-1 bg-white font-black text-xs py-2.5 rounded-lg shadow-sm text-indigo-700 transition-colors";
+                } else {
+                    btn.className = "flex-1 bg-slate-300/50 text-slate-500 font-bold text-xs py-2.5 rounded-lg hover:bg-slate-300 transition-colors";
+                }
+            });
+
+            const grid = document.getElementById('encyclopedia-grid');
+            grid.innerHTML = '';
+            
+            let displayData = biologyData;
+            if (filter !== 'all') {
+                displayData = biologyData.filter(b => b.mode === filter);
+            }
+            
+            displayData.forEach(b => {
+                const isUnlocked = unlockedBios.has(b.id);
+                const div = document.createElement('div');
+                
+                if (isUnlocked) {
+                    const colorClasses = b.mode === 'plant' ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-orange-50 border-orange-300 text-orange-900';
+                    div.className = `border-2 rounded-xl p-1.5 text-center cursor-pointer shadow-sm flex flex-col items-center justify-center min-h-[70px] hover:-translate-y-1 transition-transform ${colorClasses}`;
+                    div.onclick = () => showEncDetailModal(b);
+                    div.innerHTML = `
+                        <div class="text-xs sm:text-sm font-black tracking-tight leading-tight w-full break-words">${b.name}</div>
+                    `;
+                } else {
+                    div.className = `border-2 border-dashed border-slate-300 bg-slate-200/50 rounded-xl p-1.5 text-center flex flex-col items-center justify-center min-h-[70px] opacity-70`;
+                    div.innerHTML = `
+                        <div class="text-xl text-slate-400 mb-1">❓</div>
+                        <div class="text-[9px] font-bold text-slate-400">未調査</div>
+                    `;
+                }
+                grid.appendChild(div);
+            });
+        }
+
+        function showEncDetailModal(b) {
+            const iconHtml = b.mode === 'plant' ? '<i class="ph-fill ph-leaf text-emerald-500"></i>' : '<i class="ph-fill ph-paw-print text-orange-500"></i>';
+            document.getElementById('detail-emoji').innerHTML = iconHtml;
+            document.getElementById('detail-name').innerText = b.name;
+            document.getElementById('detail-content').innerHTML = getFactSheetHTML(b);
+            
+            document.getElementById('detail-actions').innerHTML = `
+                <div class="mt-1 text-[10px] text-slate-600 font-bold bg-slate-100 p-2.5 rounded-xl border border-slate-200 mb-2 leading-relaxed">
+                    <span class="text-indigo-600 block mb-1 text-xs"><i class="ph-fill ph-magnifying-glass"></i> 探偵長からのメモ</span>
+                    ${getExplanation(b)}
+                </div>
+                <button onclick="closeModal('modal-detail')" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition-colors active:translate-y-1 border-b-4 border-slate-300 active:border-b-0">閉じる</button>
+            `;
+            openModal('modal-detail');
+        }
+
         function attemptStartGame(mode) {
             if (mode === 'plant' || unlockedStatus[mode]) {
                 selectedMode = mode;
                 openModal('modal-difficulty');
             } else {
                 pendingMode = mode;
-                document.getElementById('password-hint').innerText = mode === 'animal' ? "動物の分類の合言葉は？" : "総復習の合言葉は？";
+                document.getElementById('password-hint').innerText = mode === 'animal' ? "動物の同定の合言葉は？" : "ごちゃまぜ調査の合言葉は？";
                 document.getElementById('password-input').value = "";
                 document.getElementById('password-error').classList.replace('opacity-100', 'opacity-0');
                 openModal('modal-password');
@@ -697,13 +873,13 @@
             const val = document.getElementById('password-input').value.trim();
             if (val === PASSWORDS[pendingMode]) {
                 unlockedStatus[pendingMode] = true;
-                try { localStorage.setItem(`biodet_v11_${pendingMode}`, 'true'); } catch(e){}
+                try { localStorage.setItem(`biodet_v13_${pendingMode}`, 'true'); } catch(e){}
                 
                 const btn = document.getElementById(`btn-${pendingMode}`);
-                btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg`;
+                btn.className = `w-full ${pendingMode==='animal'?'bg-orange-600 hover:bg-orange-500 border-orange-800':'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'} border-b-4 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base`;
                 let icon = pendingMode === 'animal' ? 'ph-paw-print' : 'ph-infinity';
-                let txt = pendingMode === 'animal' ? '動物の分類' : 'ごちゃまぜ';
-                btn.innerHTML = `<span class="flex items-center gap-3"><i class="ph-fill ${icon} text-2xl"></i> ${txt}</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>`;
+                let txt = pendingMode === 'animal' ? '動物の同定' : 'ごちゃまぜ調査';
+                btn.innerHTML = `<span class="flex items-center gap-3"><i class="ph-fill ${icon} text-2xl"></i> ${txt}</span><i class="ph-bold ph-caret-right"></i>`;
                 
                 closeModal('modal-password');
                 selectedMode = pendingMode;
@@ -716,6 +892,7 @@
                 setTimeout(() => inp.classList.remove('translate-x-1', 'border-red-500'), 200);
             }
         }
+
         document.getElementById('password-input').addEventListener('keypress', e => { if (e.key === 'Enter') checkPassword(); });
 
         function selectDifficulty(diff) {
@@ -724,24 +901,8 @@
             startGame(selectedMode);
         }
 
-        function showScreen(id) {
-            document.getElementById('screen-menu').classList.add('hidden');
-            document.getElementById('screen-game').classList.add('hidden');
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        function returnToMenu() {
-            if (timerId) { clearTimeout(timerId); timerId = null; }
-            document.getElementById('global-blocker').classList.add('hidden');
-            showScreen('screen-menu');
-        }
-
-        function openTutorial() { openModal('modal-tutorial'); }
-        function openTreeModal() { openModal('modal-tree'); }
-
         function startGame(mode) {
             const hm = document.getElementById('header-mode-text');
-            
             let basePool = [];
             if (mode === 'plant') { hm.innerHTML = '<i class="ph-fill ph-leaf text-emerald-600 text-lg"></i> 植物編'; basePool = biologyData.filter(b => b.mode === 'plant'); }
             else if (mode === 'animal') { hm.innerHTML = '<i class="ph-fill ph-paw-print text-orange-600 text-lg"></i> 動物編'; basePool = biologyData.filter(b => b.mode === 'animal'); }
@@ -754,21 +915,38 @@
             startNewRound();
         }
 
-        // ==========================================
-        // 4. ゲームロジック
-        // ==========================================
         function startNewRound() {
             if (timerId) { clearTimeout(timerId); timerId = null; }
+            isWait = false;
+            document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
             closeModal('modal-result');
-            remQ = 5; isOver = false; isWait = false;
+            switchTab('investigate');
+            
+            remQ = 5; isOver = false;
             askedQ.clear(); qHistory = [];
             updateQC();
 
             let maxCards = 14;
-            if (selectedMode === 'plant') maxCards = 6;
-            if (selectedMode === 'animal') maxCards = 8;
-            if (selectedMode === 'mix') maxCards = 14;
+            let gridClasses = "";
+
+            if (selectedMode === 'plant') { 
+                maxCards = 6; 
+                gridClasses = "grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3";
+                cardSizeClasses = { minH: "min-h-[70px] sm:min-h-[100px]", name: "text-lg sm:text-xl" };
+            }
+            else if (selectedMode === 'animal') { 
+                maxCards = 8; 
+                gridClasses = "grid-cols-3 sm:grid-cols-4 gap-1.5 sm:gap-2";
+                cardSizeClasses = { minH: "min-h-[60px] sm:min-h-[80px]", name: "text-base sm:text-lg" };
+            }
+            else { 
+                maxCards = 14; 
+                gridClasses = "grid-cols-4 sm:grid-cols-5 gap-1.5";
+                cardSizeClasses = { minH: "min-h-[50px] sm:min-h-[70px]", name: "text-sm sm:text-base" };
+            }
+
+            document.getElementById('cardsArea').className = `flex-1 overflow-y-auto custom-scrollbar grid content-start pb-2 ${gridClasses}`;
 
             const tGroups = {};
             poolData.forEach(b => {
@@ -787,9 +965,7 @@
 
             currentCandidates = shuffle([targetBio, ...selectedDummies]).map(b => ({ ...b, isElim: false }));
 
-            const badge = document.getElementById('nav-survivor-badge');
-            badge.innerText = currentCandidates.length;
-            badge.className = "bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1";
+            updateBadge(currentCandidates.length);
 
             document.getElementById('chatHistory').innerHTML = `
                 <div class="chat-bubble bg-indigo-50 text-indigo-900 border-l-4 border-indigo-600 self-start shadow-sm font-bold">
@@ -800,6 +976,26 @@
             
             renderCards();
             renderQ();
+            renderEvidence(); 
+        }
+
+        function updateBadge(surCount) {
+            const badge1 = document.getElementById('nav-survivor-badge');
+            const badge2 = document.getElementById('tab-survivor-badge');
+            const txt = surCount;
+            let cls1 = "text-white px-1.5 py-0.5 rounded text-[10px] ml-1 transition-colors ";
+            let cls2 = "absolute top-1.5 right-[20%] text-white px-1.5 py-0.5 rounded-full text-[9px] shadow-sm transition-colors ";
+            
+            if(surCount <= 3) {
+                cls1 += "bg-rose-500 animate-pulse";
+                cls2 += "bg-rose-500 animate-pulse block";
+            } else {
+                cls1 += "bg-indigo-500";
+                cls2 += "bg-indigo-500 hidden"; 
+            }
+            
+            if(badge1) { badge1.innerText = txt; badge1.className = cls1; }
+            if(badge2) { badge2.innerText = txt; badge2.className = cls2; }
         }
 
         function safeVal(bio, key) {
@@ -824,7 +1020,6 @@
 
             const isOutOfQ = remQ <= 0;
 
-            // ★ バグ修正：無駄な解答予測ループ処理（Setを使ったansの計算）を完全削除し、レンダリングを軽量化
             qs.forEach(q => {
                 const btn = document.createElement('button');
                 btn.className = `w-full bg-white border-2 rounded-xl p-2.5 sm:p-3 text-left flex flex-col gap-1 transition-all mb-1.5 ${isOutOfQ ? 'border-slate-200 opacity-50 pointer-events-none' : 'border-slate-300 hover:border-indigo-500 hover:bg-slate-50 active:translate-y-0.5 active:border-b-2'}`;
@@ -860,17 +1055,32 @@
 
                 const tVal = safeVal(targetBio, q.key);
                 let rType = "valid";
-                if (tVal === true) chat(q.yes, "yes");
-                else if (tVal === false) chat(q.no, "no");
-                else { chat(q.inv || "当てはまりません。", "inv"); rType = "invalid"; }
+                let evText = "";
+
+                if (tVal === true) { chat(q.yes, "yes"); evText = q.yes; }
+                else if (tVal === false) { chat(q.no, "no"); evText = q.no; }
+                else { chat(q.inv || "当てはまりません。", "inv"); rType = "invalid"; evText = "対象外"; }
                 
-                qHistory.push({ key: q.key, res: rType });
+                qHistory.push({ key: q.key, res: rType, tVal: tVal, text: evText, badge: q.badge });
+                
                 renderQ();
+                renderEvidence(); 
+
+                const tabBtnCand = document.getElementById('tab-btn-candidates');
+                if(tabBtnCand && window.innerWidth < 768) {
+                    tabBtnCand.classList.add('animate-bounce');
+                    setTimeout(() => tabBtnCand.classList.remove('animate-bounce'), 1500);
+                }
 
                 if (remQ === 0) {
                     timerId = setTimeout(() => {
-                        if(!isOver) {
-                            chat("調べる回数が尽きた！観察メモと検索表をもとに、生物Xを同定せよ。", "sys");
+                        if(!isOver) { 
+                            chat("調べる回数が尽きた！観察メモと検索表をもとに、生物Xを同定せよ。", "sys"); 
+                            if (window.innerWidth < 768) {
+                                setTimeout(() => {
+                                    if(!isOver) switchTab('candidates');
+                                }, 1500);
+                            }
                         }
                     }, 800);
                 }
@@ -890,10 +1100,34 @@
             }
             box.appendChild(d);
             
-            // ★ バグ修正：DOMが確実に描画されてから一番下までスクロールさせる
-            requestAnimationFrame(() => {
-                box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+            setTimeout(() => { box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' }); }, 10);
+        }
+
+        function renderEvidence() {
+            const box = document.getElementById('evidenceBoard');
+            const container = document.getElementById('evidenceTags');
+            if (!box || !container) return;
+            if (qHistory.length === 0) {
+                box.classList.add('hidden');
+                return;
+            }
+            box.classList.remove('hidden');
+            container.innerHTML = '';
+            
+            qHistory.forEach(qh => {
+                const span = document.createElement('span');
+                const bg = qh.tVal === true ? 'bg-blue-100 text-blue-800 border-blue-200' : 
+                           qh.tVal === false ? 'bg-orange-100 text-orange-800 border-orange-200' : 
+                           'bg-slate-100 text-slate-600 border-slate-200';
+                const icon = qh.tVal === true ? 'ph-check-circle' : 
+                             qh.tVal === false ? 'ph-x-circle' : 'ph-minus-circle';
+                
+                span.className = `text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:py-1 rounded-md border flex items-center gap-1 ${bg} shadow-sm`;
+                span.innerHTML = `<i class="ph-bold ${icon}"></i> <span class="opacity-70 mr-0.5">[${qh.badge}]</span> ${qh.text}`;
+                container.appendChild(span);
             });
+            
+            setTimeout(() => { box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' }); }, 10);
         }
 
         function renderCards() {
@@ -902,12 +1136,16 @@
             currentCandidates.forEach(b => {
                 const div = document.createElement('div');
                 div.id = `card-${b.id}`;
-                div.className = `candidate-card bg-white border-2 border-slate-200 rounded-xl p-1.5 sm:p-2.5 text-center cursor-pointer shadow-sm transition-all flex flex-col items-center justify-center min-h-[80px] sm:min-h-[100px] ${b.isElim ? 'eliminated' : 'hover:border-indigo-500 hover:shadow-md hover:-translate-y-1'}`;
+                
+                const colorClasses = b.mode === 'plant' 
+                    ? 'bg-emerald-50 border-emerald-300 hover:border-emerald-500 text-emerald-900' 
+                    : 'bg-orange-50 border-orange-300 hover:border-orange-500 text-orange-900';
+                
+                div.className = `candidate-card border-2 rounded-xl p-2 text-center cursor-pointer shadow-sm transition-all flex flex-col items-center justify-center ${cardSizeClasses.minH} ${b.isElim ? 'eliminated' : colorClasses + ' hover:-translate-y-1 hover:shadow-md'}`;
                 div.onclick = () => showDetailModal(b.id);
                 
                 div.innerHTML = `
-                    <div class="text-3xl sm:text-4xl mb-0.5">${getBioEmoji(b)}</div>
-                    <div class="text-[10px] sm:text-xs font-black text-slate-800 tracking-tight leading-tight w-full truncate">${b.name}</div>
+                    <div class="${cardSizeClasses.name} font-black tracking-tight leading-tight w-full break-words whitespace-normal">${b.name}</div>
                 `;
                 c.appendChild(div);
             });
@@ -920,12 +1158,7 @@
             renderCards(); 
             
             let surCount = currentCandidates.filter(c => !c.isElim).length;
-            const badge = document.getElementById('nav-survivor-badge');
-            badge.innerText = surCount;
-            if(surCount <= 3) badge.className = "bg-rose-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1 animate-pulse";
-            else badge.className = "bg-indigo-500 text-white px-1.5 py-0.5 rounded text-[10px] ml-1";
-            
-            renderQ();
+            updateBadge(surCount);
         }
 
         function updateQC() {
@@ -948,7 +1181,9 @@
         function showDetailModal(id) {
             if (isOver || isWait) return;
             const b = currentCandidates.find(x => x.id === id);
-            document.getElementById('detail-emoji').innerText = getBioEmoji(b);
+            
+            const iconHtml = b.mode === 'plant' ? '<i class="ph-fill ph-leaf text-emerald-500"></i>' : '<i class="ph-fill ph-paw-print text-orange-500"></i>';
+            document.getElementById('detail-emoji').innerHTML = iconHtml;
             document.getElementById('detail-name').innerText = b.name;
             document.getElementById('detail-content').innerHTML = getFactSheetHTML(b);
             
@@ -967,12 +1202,12 @@
         }
 
         function getReport(isSuc) {
-            if (!isSuc) return "【同定ミス】証拠が不十分なまま特定してしまったね。「🔍観察メモ」と「🗺️分類検索表」を見比べて、確実に違う生物を「候補から外す」作業を徹底しよう！";
+            if (!isSuc) return "【同定失敗…】証拠が不十分なまま特定してしまったな。「🔍観察メモ」と「🗺️検索表」を見比べて、確実に違う生物を「外す」作業を徹底しろ！";
             if (qHistory.length === 0) return "ノーヒントでの同定だね！次は特徴を調べて確実な証拠を集める練習をしよう。";
             const f = qHistory[0];
-            if (selectedMode === 'mix' && f.key === 'isPlant') return "【素晴らしい！】最初に「植物か動物か（光合成）」を見極めたのは大正解！完璧な思考プロセスだ！";
-            if (["seed", "vessels", "backbone", "isPlant"].includes(f.key)) return "【素晴らしい！】最初の調査で大きな分類基準（共通・基本）に目をつけたのは良いアプローチだ。効率よく候補を絞り込めたね！";
-            return "【惜しい！】いきなり細かい特徴を調べてしまったね。まずはリストの上のほうにある「基本」の調査から始めると、一気に候補を絞り込めるよ！";
+            if (selectedMode === 'mix' && f.key === 'isPlant') return "【素晴らしい！】最初に「植物か動物か（光合成）」を見極めたのは大正解だ！完璧な思考プロセスだぞ、我が助手よ！";
+            if (["seed", "vessels", "backbone", "isPlant"].includes(f.key)) return "【素晴らしい！】最初の調査で「大きな分類基準」に目をつけたのはセオリー通りだ。効率よく候補を絞り込めたな！";
+            return "【惜しい！】いきなり細かい特徴を調べてしまったな。枝葉末節から調べては推理が迷走するぞ。まずは大きな分類から攻めるのが探偵の鉄則だ！";
         }
 
         function finishGame(id) {
@@ -986,15 +1221,46 @@
             document.getElementById('global-blocker').classList.add('hidden');
             
             const isSuc = id === targetBio.id;
-            document.getElementById('res-icon').innerText = getBioEmoji(targetBio);
-            document.getElementById('res-title').innerText = isSuc ? "同定成功！" : "同定ミス...";
-            document.getElementById('res-title').className = `text-2xl font-black mb-1 tracking-wider ${isSuc ? "text-indigo-600" : "text-rose-600"}`;
+            const modalResult = document.getElementById('modal-result-box');
+            
+            const resIconHtml = isSuc ? '<i class="ph-fill ph-check-circle text-emerald-500"></i>' : '<i class="ph-fill ph-warning-circle text-rose-500"></i>';
+            document.getElementById('res-icon').innerHTML = resIconHtml;
             
             if (isSuc) {
-                document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は「<span class="text-indigo-600 text-lg font-black">${targetBio.name}</span>」でした。`;
+                if (!unlockedBios.has(targetBio.id)) {
+                    unlockedBios.add(targetBio.id);
+                    try { localStorage.setItem('biodet_unlocked_bios', JSON.stringify(Array.from(unlockedBios))); } catch(e) {}
+                    updateEncyclopediaCount();
+                }
+
+                modalResult.className = "bg-white rounded-3xl border-4 border-emerald-500 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh] shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pop-in";
+                document.getElementById('res-icon-bg').className = "absolute inset-0 bg-emerald-200 rounded-full blur-xl z-0 scale-150 animate-pulse";
+                document.getElementById('res-title').innerHTML = `<span class="text-emerald-600">🎉 同定成功！</span>`;
+                document.getElementById('res-title').className = `text-3xl font-black mb-2 tracking-wider`;
+                document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は<br>「<span class="text-emerald-600 text-xl font-black">${targetBio.name}</span>」でした。`;
+                document.getElementById('res-msg').className = "mb-4 font-bold text-sm bg-emerald-50 text-emerald-900 p-3 rounded-lg border border-emerald-200";
+                
+                const btn = document.getElementById('btn-next-round');
+                btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all text-lg";
+                btn.innerText = "次の調査へ進む！";
+
+                setTimeout(() => {
+                    if (typeof confetti === 'function') {
+                        try { confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#10B981', '#3B82F6', '#FBBF24'] }); } catch(e) {}
+                    }
+                }, 200);
+
             } else {
-                const wName = b.name;
-                document.getElementById('res-msg').innerHTML = `「${wName}」ではありません。<br>本当の正体は「<span class="text-rose-600 text-lg font-black">${targetBio.name}</span>」でした。`;
+                modalResult.className = "bg-white rounded-3xl border-4 border-rose-500 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh] shadow-[0_0_30px_rgba(244,63,94,0.3)] animate-pop-in";
+                document.getElementById('res-icon-bg').className = "absolute inset-0 bg-rose-200 rounded-full blur-xl z-0 scale-150";
+                document.getElementById('res-title').innerHTML = `<span class="text-rose-600">⚠️ 同定ミス...</span>`;
+                document.getElementById('res-title').className = `text-2xl font-black mb-2 tracking-wider`;
+                document.getElementById('res-msg').innerHTML = `「${b.name}」ではありません。<br>本当の正体は「<span class="text-rose-600 text-lg font-black">${targetBio.name}</span>」でした。`;
+                document.getElementById('res-msg').className = "mb-4 font-bold text-sm bg-rose-50 text-rose-900 p-3 rounded-lg border border-rose-200";
+                
+                const btn = document.getElementById('btn-next-round');
+                btn.className = "w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-slate-800 active:border-b-0 active:translate-y-1 transition-all text-lg";
+                btn.innerText = "もう一度やり直す";
             }
             
             document.getElementById('res-exp').innerText = getExplanation(targetBio);
@@ -1007,15 +1273,15 @@
             if (unlockedStatus.animal) {
                 const btn = document.getElementById('btn-animal');
                 btn.className = "w-full bg-orange-600 hover:bg-orange-500 border-b-4 border-orange-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base sm:text-lg";
-                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-paw-print text-2xl"></i> 動物の分類</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>';
+                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-paw-print text-2xl"></i> 動物の分類</span><i class="ph-bold ph-caret-right"></i>';
             }
             if (unlockedStatus.mix) {
                 const btn = document.getElementById('btn-mix');
                 btn.className = "w-full bg-indigo-600 hover:bg-indigo-500 border-b-4 border-indigo-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 relative overflow-hidden text-base sm:text-lg";
-                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-infinity text-2xl"></i> ごちゃまぜ</span><i class="ph-bold ph-caret-right group-hover:translate-x-1 transition-transform"></i>';
+                btn.innerHTML = '<span class="flex items-center gap-3"><i class="ph-fill ph-infinity text-2xl"></i> ごちゃまぜ調査</span><i class="ph-bold ph-caret-right"></i>';
             }
+            updateEncyclopediaCount();
         };
-
     </script>
 </body>
 </html>
