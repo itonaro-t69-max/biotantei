@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 v13.2.0</title>
+    <title>バイオ探偵 v13.4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -66,9 +66,9 @@
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
-            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6">v13.2.0 (機能改善版)</span>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6">v13.4.0 (無謬版)</span>
 
-            <!-- 遊び方を一番最初の画面に表示 -->
+            <!-- 遊び方表示 -->
             <div class="max-w-sm mx-auto mb-8 bg-slate-700/50 p-4 rounded-xl text-left border border-slate-600 backdrop-blur-sm">
                 <h3 class="text-yellow-400 font-bold mb-2 flex items-center gap-1.5"><i class="ph-fill ph-info"></i> 遊び方</h3>
                 <ul class="text-slate-200 space-y-1.5 text-xs sm:text-sm font-medium">
@@ -124,8 +124,8 @@
 
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full relative">
             <div id="pane-investigate" class="w-full md:w-5/12 h-full flex flex-col p-1.5 sm:p-3 md:border-r border-slate-200 relative overflow-hidden transition-opacity">
-                <div id="chatHistory" class="flex-none h-[45%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
-                <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden min-h-0">
+                <div id="chatHistory" class="flex-none h-[45%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar transition-all duration-300"></div>
+                <div id="questionArea" class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden min-h-0 transition-all duration-300">
                     <div id="loadingOverlay" class="absolute inset-0 bg-white/70 z-20 hidden flex justify-center items-center text-2xl">⏳</div>
                     <p class="text-[10px] text-slate-500 font-black mb-1 flex-none">🔍 特徴を調べる（項目をタップ）</p>
                     <div id="questionButtonsContainer" class="flex-1 overflow-y-auto custom-scrollbar px-1 flex flex-col pb-2"></div>
@@ -151,8 +151,8 @@
                 </div>
             </div>
 
-            <!-- 盤面振り返りバー (結果画面を閉じた後に表示) -->
-            <div id="review-bar" class="absolute bottom-4 right-4 z-40 hidden">
+            <!-- ★ スマホでのセーフエリア干渉を防ぐため、bottom-24 に調整 -->
+            <div id="review-bar" class="absolute bottom-24 md:bottom-6 right-4 z-40 hidden">
                 <button onclick="startNewRound()" id="review-next-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_15px_rgba(79,70,229,0.4)] transition-transform active:scale-95 text-sm sm:text-base border-2 border-white flex items-center gap-2">
                     <i class="ph-bold ph-arrow-right"></i> 次の調査へ
                 </button>
@@ -354,9 +354,8 @@
             </div>
             <button onclick="startNewRound()" id="btn-next-round" class="w-full font-bold py-3.5 rounded-xl mt-4 border-b-4 active:border-b-0 active:translate-y-1 transition-all"></button>
             
-            <!-- ★ 盤面振り返りボタン -->
-            <button onclick="closeModal('modal-result'); document.getElementById('review-bar').classList.remove('hidden');" class="w-full mt-3 text-slate-500 hover:text-slate-700 font-bold py-2 text-sm transition-colors flex items-center justify-center gap-1">
-                <i class="ph-bold ph-eye"></i> 調査ログを振り返る
+            <button onclick="enterReviewMode()" class="w-full mt-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-200 font-bold py-3 rounded-xl text-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+                <i class="ph-bold ph-chats text-xl"></i> 質問と回答の「対話履歴」を見る
             </button>
         </div>
     </div>
@@ -630,7 +629,6 @@
             { id: "a100", mode: "animal", name: "イソギンチャク", traits: { isPlant: false, backbone: false, arthropod: false, mollusk: false } }
         ];
 
-        // 教科書レベルの基本ID群
         const basicIds = [
             "p1", "p2", "p3", "p8", "p21", "p22", "p23", "p24", "p41", "p42", "p44", "p45", "p61", "p62", "p63", "p76", "p77", "p78", "p91", "p92", 
             "a1", "a2", "a3", "a4", "a5", "a13", "a21", "a22", "a23", "a24", "a26", "a36", "a39", "a40", "a41", "a46", "a51", "a52", "a56", "a58", "a59", "a68", "a71", "a73", "a75", "a76", "a80", "a81", "a82", "a85", "a86", "a88", "a91", "a92", "a94", "a96", "a98", "a99"
@@ -694,12 +692,41 @@
             }
         }
 
+        function enterReviewMode() {
+            closeModal('modal-result');
+            document.getElementById('review-bar').classList.remove('hidden');
+            switchTab('investigate');
+            
+            const chatHistory = document.getElementById('chatHistory');
+            const questionArea = document.getElementById('questionArea');
+            
+            if (chatHistory && questionArea) {
+                chatHistory.classList.remove('flex-none', 'h-[45%]', 'md:h-[35%]');
+                chatHistory.classList.add('flex-1');
+                questionArea.classList.add('hidden');
+                questionArea.classList.remove('flex');
+            }
+            
+            setTimeout(() => { chatHistory.scrollTo({ top: chatHistory.scrollHeight, behavior: 'smooth' }); }, 10);
+        }
+
         function returnToMenu() {
             if (timerId) { clearTimeout(timerId); timerId = null; }
             isWait = false;
             document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
             document.getElementById('review-bar').classList.add('hidden');
+            
+            // ★ メニューに戻る際にも振り返りモードのUIを確実にリセット
+            const chatHistory = document.getElementById('chatHistory');
+            const questionArea = document.getElementById('questionArea');
+            if (chatHistory && questionArea) {
+                chatHistory.classList.add('flex-none', 'h-[45%]', 'md:h-[35%]');
+                chatHistory.classList.remove('flex-1');
+                questionArea.classList.remove('hidden');
+                questionArea.classList.add('flex');
+            }
+
             closeModal('modal-result');
             showScreen('screen-menu');
         }
@@ -925,10 +952,23 @@
             isWait = false;
             document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
-            document.getElementById('review-bar').classList.add('hidden');
+            
+            // ★ バグ修正：やり直す際にも振り返りバーを確実に消去する
+            const reviewBar = document.getElementById('review-bar');
+            if (reviewBar) reviewBar.classList.add('hidden');
+            
             closeModal('modal-result');
             switchTab('investigate');
             
+            const chatHistory = document.getElementById('chatHistory');
+            const questionArea = document.getElementById('questionArea');
+            if (chatHistory && questionArea) {
+                chatHistory.classList.add('flex-none', 'h-[45%]', 'md:h-[35%]');
+                chatHistory.classList.remove('flex-1');
+                questionArea.classList.remove('hidden');
+                questionArea.classList.add('flex');
+            }
+
             remQ = 5; isOver = false;
             askedQ.clear(); qHistory = [];
             updateQC();
