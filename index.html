@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 v13.1.1</title>
+    <title>バイオ探偵 v13.2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -66,7 +66,18 @@
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
-            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6 sm:mb-10">v13.1.1 (バグ完全排除版)</span>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6">v13.2.0 (機能改善版)</span>
+
+            <!-- 遊び方を一番最初の画面に表示 -->
+            <div class="max-w-sm mx-auto mb-8 bg-slate-700/50 p-4 rounded-xl text-left border border-slate-600 backdrop-blur-sm">
+                <h3 class="text-yellow-400 font-bold mb-2 flex items-center gap-1.5"><i class="ph-fill ph-info"></i> 遊び方</h3>
+                <ul class="text-slate-200 space-y-1.5 text-xs sm:text-sm font-medium">
+                    <li>① <span class="text-white font-bold">1種だけいる「生物X」</span>を当てよう！</li>
+                    <li>② <span class="text-indigo-300 font-bold">「💬特徴を調べる」</span>で情報を集める。</li>
+                    <li>③ 違う生物はカードを開いて<span class="text-rose-300 font-bold">「❌外す」</span>。</li>
+                    <li>④ 証拠と検索表から推理して<span class="text-emerald-300 font-bold">「🎯同定」</span>！</li>
+                </ul>
+            </div>
 
             <div class="space-y-4 max-w-sm mx-auto">
                 <button onclick="attemptStartGame('plant')" class="w-full bg-emerald-600 hover:bg-emerald-500 border-b-4 border-emerald-800 text-white font-bold py-3.5 px-5 rounded-xl transition-all flex justify-between items-center group shadow-lg active:translate-y-1 active:border-b-0 text-base">
@@ -90,7 +101,6 @@
                     </button>
                 </div>
             </div>
-            <button onclick="openModal('modal-tutorial')" class="mt-6 text-sm text-slate-400 underline font-bold hover:text-white transition-colors">📖 探偵学校（遊び方）</button>
         </div>
     </div>
 
@@ -112,7 +122,7 @@
             </div>
         </div>
 
-        <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full">
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden max-w-6xl mx-auto w-full relative">
             <div id="pane-investigate" class="w-full md:w-5/12 h-full flex flex-col p-1.5 sm:p-3 md:border-r border-slate-200 relative overflow-hidden transition-opacity">
                 <div id="chatHistory" class="flex-none h-[45%] md:h-[35%] bg-white border border-slate-200 p-2 overflow-y-auto mb-1.5 flex flex-col gap-1 shadow-sm rounded-xl custom-scrollbar"></div>
                 <div class="flex-1 bg-slate-100 rounded-xl border border-slate-200 p-2 shadow-sm flex flex-col relative overflow-hidden min-h-0">
@@ -139,6 +149,13 @@
                     </div>
                     <div id="evidenceTags" class="flex flex-wrap gap-1.5"></div>
                 </div>
+            </div>
+
+            <!-- 盤面振り返りバー (結果画面を閉じた後に表示) -->
+            <div id="review-bar" class="absolute bottom-4 right-4 z-40 hidden">
+                <button onclick="startNewRound()" id="review-next-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_15px_rgba(79,70,229,0.4)] transition-transform active:scale-95 text-sm sm:text-base border-2 border-white flex items-center gap-2">
+                    <i class="ph-bold ph-arrow-right"></i> 次の調査へ
+                </button>
             </div>
         </div>
 
@@ -313,24 +330,6 @@
         </div>
     </div>
 
-    <!-- 遊び方モーダル -->
-    <div id="modal-tutorial" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
-        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
-            <button onclick="closeModal('modal-tutorial')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
-            <div class="text-6xl mb-2">🎓</div>
-            <h2 class="font-black text-2xl mb-4 text-slate-800">探偵学校（遊び方）</h2>
-            <div class="text-left text-sm font-bold leading-relaxed text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <p class="mb-2">① リストの中に1種だけいる「生物X」を同定せよ。</p>
-                <p class="mb-2">② <span class="text-indigo-600">「💬特徴を調べる」</span>から質問をして事実を聞き出そう。</p>
-                <p class="mb-2">③ <span class="text-slate-600">「🗂️候補リスト」</span>からカードを開き、事実と合わない生物は自分で<span class="text-slate-400">「❌外す」</span>を押して暗転させよう。</p>
-                <p>④ 迷ったら<span class="text-emerald-600">「🗺️検索表」</span>と、下部に出る<span class="text-indigo-600">「📌証拠ボード」</span>を見比べて推理し、最後に「🎯 同定する」を押せ！</p>
-            </div>
-            <button onclick="closeModal('modal-tutorial')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 mt-4 text-lg">
-                調査を始める
-            </button>
-        </div>
-    </div>
-
     <!-- 結果モーダル -->
     <div id="modal-result" class="fixed inset-0 bg-slate-900/80 hidden flex justify-center items-center z-50 p-4 backdrop-blur-sm">
         <div id="modal-result-box" class="bg-white rounded-3xl border-4 max-w-sm w-full p-6 text-center flex flex-col max-h-[85vh] transition-all duration-300">
@@ -354,6 +353,11 @@
                 </div>
             </div>
             <button onclick="startNewRound()" id="btn-next-round" class="w-full font-bold py-3.5 rounded-xl mt-4 border-b-4 active:border-b-0 active:translate-y-1 transition-all"></button>
+            
+            <!-- ★ 盤面振り返りボタン -->
+            <button onclick="closeModal('modal-result'); document.getElementById('review-bar').classList.remove('hidden');" class="w-full mt-3 text-slate-500 hover:text-slate-700 font-bold py-2 text-sm transition-colors flex items-center justify-center gap-1">
+                <i class="ph-bold ph-eye"></i> 調査ログを振り返る
+            </button>
         </div>
     </div>
 
@@ -695,6 +699,7 @@
             isWait = false;
             document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
+            document.getElementById('review-bar').classList.add('hidden');
             closeModal('modal-result');
             showScreen('screen-menu');
         }
@@ -920,6 +925,7 @@
             isWait = false;
             document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
+            document.getElementById('review-bar').classList.add('hidden');
             closeModal('modal-result');
             switchTab('investigate');
             
@@ -1141,12 +1147,16 @@
                     ? 'bg-emerald-50 border-emerald-300 hover:border-emerald-500 text-emerald-900' 
                     : 'bg-orange-50 border-orange-300 hover:border-orange-500 text-orange-900';
                 
-                div.className = `candidate-card border-2 rounded-xl p-2 text-center cursor-pointer shadow-sm transition-all flex flex-col items-center justify-center ${cardSizeClasses.minH} ${b.isElim ? 'eliminated' : colorClasses + ' hover:-translate-y-1 hover:shadow-md'}`;
+                div.className = `candidate-card border-2 rounded-xl p-2 text-center cursor-pointer shadow-sm transition-all flex flex-col items-center justify-center relative overflow-hidden ${cardSizeClasses.minH} ${b.isElim ? 'eliminated' : colorClasses + ' hover:-translate-y-1 hover:shadow-md'}`;
                 div.onclick = () => showDetailModal(b.id);
                 
-                div.innerHTML = `
-                    <div class="${cardSizeClasses.name} font-black tracking-tight leading-tight w-full break-words whitespace-normal">${b.name}</div>
-                `;
+                let html = `<div class="${cardSizeClasses.name} font-black tracking-tight leading-tight w-full break-words whitespace-normal relative z-10">${b.name}</div>`;
+                
+                if (b.isElim) {
+                    html += `<div class="absolute inset-0 flex items-center justify-center z-0"><i class="ph-bold ph-x text-5xl text-slate-400/50"></i></div>`;
+                }
+
+                div.innerHTML = html;
                 c.appendChild(div);
             });
         }
@@ -1187,12 +1197,16 @@
             document.getElementById('detail-name').innerText = b.name;
             document.getElementById('detail-content').innerHTML = getFactSheetHTML(b);
             
+            const elimBtnClass = b.isElim 
+                ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800 border-emerald-300" 
+                : "bg-rose-100 hover:bg-rose-200 text-rose-800 border-rose-300";
+
             document.getElementById('detail-actions').innerHTML = `
                 <div class="flex gap-2 w-full mb-2">
-                    <button onclick="toggleElim('${b.id}'); closeModal('modal-detail');" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-md border-b-4 border-slate-300 active:border-b-0 active:translate-y-1 text-xs sm:text-sm">
+                    <button onclick="toggleElim('${b.id}'); closeModal('modal-detail');" class="flex-1 font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-sm border-b-4 active:border-b-0 active:translate-y-1 text-xs sm:text-sm ${elimBtnClass}">
                         ${b.isElim ? '↺ 候補に戻す' : '❌ 候補から外す'}
                     </button>
-                    <button onclick="closeModal('modal-detail'); finishGame('${b.id}');" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-md border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 ${b.isElim ? 'btn-accuse-disabled' : ''} text-xs sm:text-sm">
+                    <button onclick="closeModal('modal-detail'); finishGame('${b.id}');" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 sm:py-3 rounded-xl transition-colors shadow-sm border-b-4 border-indigo-800 active:border-b-0 active:translate-y-1 ${b.isElim ? 'btn-accuse-disabled' : ''} text-xs sm:text-sm">
                         🎯 同定する
                     </button>
                 </div>
@@ -1240,10 +1254,6 @@
                 document.getElementById('res-msg').innerHTML = `見事な調査だ！未確認生物の正体は<br>「<span class="text-emerald-600 text-xl font-black">${targetBio.name}</span>」でした。`;
                 document.getElementById('res-msg').className = "mb-4 font-bold text-sm bg-emerald-50 text-emerald-900 p-3 rounded-lg border border-emerald-200";
                 
-                const btn = document.getElementById('btn-next-round');
-                btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all text-lg";
-                btn.innerText = "次の調査へ進む！";
-
                 setTimeout(() => {
                     if (typeof confetti === 'function') {
                         try { confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#10B981', '#3B82F6', '#FBBF24'] }); } catch(e) {}
@@ -1257,14 +1267,21 @@
                 document.getElementById('res-title').className = `text-2xl font-black mb-2 tracking-wider`;
                 document.getElementById('res-msg').innerHTML = `「${b.name}」ではありません。<br>本当の正体は「<span class="text-rose-600 text-lg font-black">${targetBio.name}</span>」でした。`;
                 document.getElementById('res-msg').className = "mb-4 font-bold text-sm bg-rose-50 text-rose-900 p-3 rounded-lg border border-rose-200";
-                
-                const btn = document.getElementById('btn-next-round');
-                btn.className = "w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 border-slate-800 active:border-b-0 active:translate-y-1 transition-all text-lg";
-                btn.innerText = "もう一度やり直す";
             }
             
             document.getElementById('res-exp').innerText = getExplanation(targetBio);
             document.getElementById('res-report').innerText = getReport(isSuc);
+            
+            const reviewBtnText = isSuc ? "次の調査へ進む！" : "もう一度やり直す";
+            const reviewBtnColor = isSuc ? "bg-emerald-600 hover:bg-emerald-700 border-emerald-800" : "bg-slate-600 hover:bg-slate-700 border-slate-800";
+            
+            const btn = document.getElementById('btn-next-round');
+            btn.className = `w-full text-white font-bold py-3.5 rounded-xl mt-4 border-b-4 active:border-b-0 active:translate-y-1 transition-all text-lg ${reviewBtnColor}`;
+            btn.innerText = reviewBtnText;
+
+            const reviewBarBtn = document.getElementById('review-next-btn');
+            reviewBarBtn.innerHTML = `${reviewBtnText} <i class="ph-bold ph-arrow-right"></i>`;
+            reviewBarBtn.className = `font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow-lg active:scale-95 text-white flex items-center gap-1.5 ${isSuc ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-600 hover:bg-slate-500'}`;
             
             openModal('modal-result');
         }
