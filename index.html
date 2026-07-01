@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>バイオ探偵 v13.4.0</title>
+    <title>バイオ探偵 v13.4.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -59,14 +59,16 @@
 
     <div id="global-blocker" class="fixed inset-0 z-[100] hidden"></div>
 
+    <!-- ========================================== -->
     <!-- 画面1: メニュー -->
+    <!-- ========================================== -->
     <div id="screen-menu" class="absolute inset-0 z-40 bg-slate-800 text-white flex flex-col justify-center items-center p-4 sm:p-6 overflow-y-auto">
         <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at center, #ffffff 2px, transparent 2px); background-size: 30px 30px;"></div>
         <div class="relative z-10 max-w-lg w-full text-center py-6">
             <div class="mb-3 flex justify-center"><i class="ph-fill ph-detective text-6xl text-indigo-400"></i></div>
             <h1 class="text-4xl font-black mb-1 tracking-tight">バイオ探偵</h1>
             <p class="text-lg font-bold text-slate-300 mb-6">〜未確認生物を同定せよ〜</p>
-            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6">v13.4.0 (無謬版)</span>
+            <span class="inline-block bg-slate-700 text-slate-300 text-xs font-bold px-3 py-1 rounded-full border border-slate-600 mb-6">v13.4.2 (完全クリーン版)</span>
 
             <!-- 遊び方表示 -->
             <div class="max-w-sm mx-auto mb-8 bg-slate-700/50 p-4 rounded-xl text-left border border-slate-600 backdrop-blur-sm">
@@ -104,7 +106,9 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
     <!-- 画面2: ゲーム画面 -->
+    <!-- ========================================== -->
     <div id="screen-game" class="hidden flex-1 flex-col h-full bg-slate-50 relative">
         <div class="bg-white shadow-sm z-20 p-2 border-b border-slate-200 flex-none">
             <div class="flex justify-between items-center mb-1.5 px-1 max-w-6xl mx-auto">
@@ -151,7 +155,7 @@
                 </div>
             </div>
 
-            <!-- ★ スマホでのセーフエリア干渉を防ぐため、bottom-24 に調整 -->
+            <!-- スマホでのセーフエリア干渉を防ぐため、bottom-24 に調整 -->
             <div id="review-bar" class="absolute bottom-24 md:bottom-6 right-4 z-40 hidden">
                 <button onclick="startNewRound()" id="review-next-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-full shadow-[0_4px_15px_rgba(79,70,229,0.4)] transition-transform active:scale-95 text-sm sm:text-base border-2 border-white flex items-center gap-2">
                     <i class="ph-bold ph-arrow-right"></i> 次の調査へ
@@ -174,7 +178,9 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
     <!-- 画面3: 図鑑画面 -->
+    <!-- ========================================== -->
     <div id="screen-encyclopedia" class="hidden flex-1 flex-col h-full bg-slate-100 relative">
         <div class="bg-slate-800 text-white shadow-md z-20 p-3 flex-none flex justify-between items-center">
             <div class="flex flex-col">
@@ -199,7 +205,9 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
     <!-- モーダル群 -->
+    <!-- ========================================== -->
     <div id="modal-password" class="fixed inset-0 bg-slate-900/90 hidden flex justify-center items-center z-50 p-4 backdrop-blur-md">
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-4 border-slate-800 relative">
             <button onclick="closeModal('modal-password')" class="absolute top-3 right-3 text-slate-400 p-1"><i class="ph-bold ph-x text-xl"></i></button>
@@ -360,11 +368,10 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
     <!-- アプリケーションのスクリプト -->
+    <!-- ========================================== -->
     <script>
-        // ==========================================
-        // 状態管理・定数定義
-        // ==========================================
         const PASSWORDS = { animal: "せきつい", mix: "しんか" };
         let unlockedStatus = { animal: false, mix: false };
         let unlockedBios = new Set();
@@ -685,9 +692,17 @@
             document.getElementById('screen-menu').classList.add('hidden');
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-encyclopedia').classList.add('hidden');
+            
+            document.getElementById('screen-game').classList.remove('flex');
+            document.getElementById('screen-encyclopedia').classList.remove('flex');
+
             document.getElementById(id).classList.remove('hidden');
-            if(id === 'screen-game') {
+            
+            if(id === 'screen-game' || id === 'screen-encyclopedia') {
                 document.getElementById(id).classList.add('flex');
+            }
+            
+            if(id === 'screen-game') {
                 switchTab('investigate'); 
             }
         }
@@ -717,7 +732,6 @@
             document.getElementById('global-blocker').classList.add('hidden');
             document.getElementById('review-bar').classList.add('hidden');
             
-            // ★ メニューに戻る際にも振り返りモードのUIを確実にリセット
             const chatHistory = document.getElementById('chatHistory');
             const questionArea = document.getElementById('questionArea');
             if (chatHistory && questionArea) {
@@ -953,7 +967,6 @@
             document.getElementById('loadingOverlay').classList.add('hidden');
             document.getElementById('global-blocker').classList.add('hidden');
             
-            // ★ バグ修正：やり直す際にも振り返りバーを確実に消去する
             const reviewBar = document.getElementById('review-bar');
             if (reviewBar) reviewBar.classList.add('hidden');
             
